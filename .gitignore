@@ -1,4 +1,5 @@
 slurm-outputs
+sandbox
 figures/
 *.prof
 # Byte-compiled / optimized / DLL files
