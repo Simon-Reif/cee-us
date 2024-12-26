@@ -3,7 +3,7 @@ from warnings import warn
 
 import numpy as np
 import torch
-from gym import spaces
+from gymnasium import spaces
 
 from mbrl import allogger, torch_helpers
 from mbrl.controllers import colored_noise

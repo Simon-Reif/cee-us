@@ -4,12 +4,13 @@ import random
 from collections import namedtuple
 from typing import NamedTuple
 
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import error, spaces, utils
-from gym.envs.mujoco import mujoco_env
-from gym.envs.robotics import utils as robotics_utils
-from gym.utils import seeding
+from gymnasium import error, spaces, utils
+from gymnasium.envs.mujoco import mujoco_env
+#from gym.envs.robotics import utils as robotics_utils
+from gymnasium_robotics.utils import mujoco_py_utils as robotics_utils
+from gymnasium.utils import seeding
 
 try:
     import mujoco_py
@@ -536,7 +537,8 @@ class RobodeskEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
 
 if __name__ == "__main__":
-    from gym.envs.robotics.rotations import mat2quat
+    #from gym.envs.robotics.rotations import mat2quat
+    from gymnasium_robotics.utils.rotations import mat2quat
 
     env = RobodeskEnv(task="open_drawer", reward="sparse")
     env.reset()
@@ -546,7 +548,7 @@ if __name__ == "__main__":
     for t in range(1000):
         if t % 10 == 0:
             action = env.action_space.sample()
-        obs, r, d, i = env.step(action)
+        obs, r, terminated, truncated, i = env.step(action)
         print(mat2quat(env.sim.data.get_site_xmat("end_effector")))
         env.render()
     env.close()

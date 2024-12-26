@@ -5,8 +5,8 @@ import tempfile
 import mujoco_py
 import numpy as np
 import torch
-from gym import spaces, utils
-from gym.envs.mujoco import mujoco_env
+from gymnasium import spaces, utils
+from gymnasium.envs.mujoco import mujoco_env
 
 from mbrl import torch_helpers
 from mbrl.environments.playground.xml_gen import generate_xml

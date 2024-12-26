@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Sequence, Tuple
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from mbrl.rolloutbuffer import RolloutBuffer

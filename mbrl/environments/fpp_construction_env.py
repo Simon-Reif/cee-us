@@ -4,9 +4,11 @@ from abc import ABC
 import mujoco_py
 import numpy as np
 import torch
-from gym import spaces
-from gym.envs.robotics.rotations import euler2quat
-from gym.utils import EzPickle
+from gymnasium import spaces
+#from gym.envs.robotics.rotations import euler2quat
+from gymnasium_robotics.utils.rotations import euler2quat
+
+from gymnasium.utils import EzPickle
 
 from mbrl import torch_helpers
 from mbrl.environments.abstract_environments import MaskedGoalSpaceEnvironmentInterface

@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 from numpy.random import RandomState
 
 from mbrl.seeding import Seeding
@@ -48,8 +48,8 @@ class GaussNoiseWrapper(EnvWrapper):
         if self.action_noise_scale is not None and self._is_within_region(state, self.action_noise_region):
             noise = self._sample_noise(self.action_noise_mean, self.action_noise_scale)
             action = np.clip(action + noise, self.action_space.lo, self.action_space.hi)
-        obs, r, d, inf = self.unwrapped.step(action)
+        obs, r, terminated, truncated, inf = self.unwrapped.step(action)
         if self.observation_noise_scale is not None:
             noise = self._sample_noise(self.observation_noise_mean, self.observation_noise_scale)
             obs = np.clip(obs + noise, self.observation_space.lo, self.observation_space.hi)
-        return obs, r, d, inf
+        return obs, r, terminated, truncated, inf

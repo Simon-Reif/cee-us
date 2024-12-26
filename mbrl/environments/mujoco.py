@@ -1,6 +1,6 @@
 from abc import ABC
 
-from gym.envs.mujoco import MujocoEnv
+from gymnasium.envs.mujoco import MujocoEnv
 from mujoco_py.generated import const
 
 from mbrl.environments.abstract_environments import GroundTruthSupportEnv

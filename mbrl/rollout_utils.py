@@ -279,7 +279,8 @@ class RolloutManager:
                     # print(ac)
                     if pre_env_step_hooks:
                         hook_executer(pre_env_step_hooks, locals(), globals())
-                    next_ob, rew, done, info_dict = env.step(ac)
+                    next_ob, rew, terminated, truncated, info_dict = env.step(ac)
+                    done = terminated or truncated
                     if post_env_step_hooks:
                         hook_executer(post_env_step_hooks, locals(), globals())
                 except Exception as e:

@@ -3,8 +3,11 @@ import tempfile
 
 import mujoco_py
 import numpy as np
-from gym import utils as gym_utils
-from gym.envs.robotics import fetch_env, rotations, utils
+from gymnasium import utils as gym_utils
+#from gym.envs.robotics import fetch_env, rotations, utils
+from gymnasium_robotics.envs.fetch import fetch_env
+from gymnasium_robotics.utils import rotations, mujoco_py_utils as utils
+
 from mujoco_py.generated import const
 
 from .colors import get_colors

@@ -105,7 +105,7 @@ class GroundTruthModel(AbstractGroundTruthModel):
             obs = start_obs
             for h in range(horizon):
                 action = policy.get_action(obs, None)
-                next_obs, r, _, _ = self.simulated_env.step(action)
+                next_obs, r, _, _, _ = self.simulated_env.step(action)
                 yield (obs, next_obs, action, r)
                 obs = next_obs
 
@@ -191,7 +191,7 @@ class GroundTruthEnsembleModel(EnsembleModel, GroundTruthModel):
             for h in range(horizon):
                 action = policy.get_action(obs[:, None] if num_step_samples else obs, None)
                 assert num_step_samples is None or action.ndim == 2
-                next_obs, r, _, _ = self.simulated_env.step(action[0] if num_step_samples else action)
+                next_obs, r, _, _, _ = self.simulated_env.step(action[0] if num_step_samples else action)
                 yield (obs, next_obs, action, np.tile(r, (len(obs), 1)))
                 obs = next_obs
 

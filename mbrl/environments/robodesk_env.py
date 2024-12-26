@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 import torch
-from gym.utils import EzPickle
+from gymnasium.utils import EzPickle
 
 from mbrl import torch_helpers
 

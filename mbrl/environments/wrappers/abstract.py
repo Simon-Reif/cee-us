@@ -1,7 +1,7 @@
 from typing import Any, List
 
-from gym import Wrapper
-from gym.wrappers import *
+from gymnasium import Wrapper
+from gymnasium.wrappers import *
 
 
 class EnvWrapper(Wrapper):

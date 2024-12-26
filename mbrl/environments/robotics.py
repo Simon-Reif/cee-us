@@ -2,13 +2,18 @@ from abc import ABC
 
 import numpy as np
 import torch
-from gym import spaces
-from gym.envs.robotics.fetch.pick_and_place import (
-    FetchPickAndPlaceEnv as FetchPickAndPlaceEnv_v1,
+from gymnasium import spaces
+# from gym.envs.robotics.fetch.pick_and_place import (
+#     FetchPickAndPlaceEnv as FetchPickAndPlaceEnv_v1,
+# )
+from gymnasium_robotics.envs.fetch.pick_and_place import (
+    MujocoPyFetchPickAndPlaceEnv as FetchPickAndPlaceEnv_v1,
 )
-from gym.envs.robotics.fetch.reach import FetchReachEnv
-from gym.envs.robotics.robot_env import RobotEnv
-from gym.utils import EzPickle
+#from gym.envs.robotics.fetch.reach import FetchReachEnv
+from gymnasium_robotics.envs.fetch.reach import MujocoPyFetchReachEnv as FetchReachEnv
+#from gym.envs.robotics.robot_env import RobotEnv
+from gymnasium_robotics.envs.robot_env import MujocoPyRobotEnv as RobotEnv
+from gymnasium.utils import EzPickle
 
 from mbrl import torch_helpers
 from mbrl.environments.abstract_environments import (
@@ -115,8 +120,8 @@ class FetchPickAndPlace(
         return np.concatenate((obs["observation"], obs["desired_goal"]))
 
     def step(self, action):
-        obs, reward, done, info = super().step(action)
-        return self.flatten_observation(obs), reward, done, info
+        obs, reward, terminated, truncated, info = super().step(action)
+        return self.flatten_observation(obs), reward, terminated, truncated, info
 
     def reset(self):
         # return self.flatten_observation(super().reset())
@@ -306,8 +311,8 @@ class FetchReach(MaskedGoalSpaceEnvironmentInterface, GymRoboticsGroundTruthSupp
         return np.concatenate((obs["observation"], obs["desired_goal"]))
 
     def step(self, action):
-        obs, reward, done, info = super().step(action)
-        return self.flatten_observation(obs), reward, done, info
+        obs, reward, terminated, truncated, info = super().step(action)
+        return self.flatten_observation(obs), reward, terminated, truncated, info
 
     def reset(self):
         return self.flatten_observation(super().reset())

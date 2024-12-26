@@ -1,7 +1,7 @@
 import numpy as np
 import torch
-from gym import spaces
-from gym.utils import EzPickle
+from gymnasium import spaces
+from gymnasium.utils import EzPickle
 
 from mbrl import torch_helpers
 from mbrl.environments.abstract_environments import MaskedGoalSpaceEnvironmentInterface
@@ -191,8 +191,8 @@ class PlaygroundwGoals(MaskedGoalSpaceEnvironmentInterface, MujocoGroundTruthSup
         return np.concatenate((obs["observation"], obs["desired_goal"]))
 
     def step(self, action):
-        obs, reward, done, info = super().step(action)
-        return self.flatten_observation(obs), reward, done, info
+        obs, reward, terminated, truncated, info = super().step(action)
+        return self.flatten_observation(obs), reward, terminated, truncated, info
 
     def reset(self):
         did_reset_sim = False
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
         for t in range(200):
             action = exploration_policy.sample(env.get_object_centric_obs(obs))
-            next_obs, rew, done, _ = env.step(action)
+            next_obs, rew, terminated, truncated, _ = env.step(action)
 
             observations.append(obs)
             next_observations.append(next_obs)

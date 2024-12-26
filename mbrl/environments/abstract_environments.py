@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import numpy as np
 
 from mbrl.base_types import Env
