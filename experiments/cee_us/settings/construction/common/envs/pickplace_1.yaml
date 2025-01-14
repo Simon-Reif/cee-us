@@ -1,0 +1,9 @@
+env: "FetchPickAndPlaceConstruction"
+env_params:
+  sparse: false
+  shaped_reward: true
+  num_blocks: 1
+  stack_only: true
+  case: "PickAndPlace"
+  visualize_target: false
+  visualize_mocap: false
