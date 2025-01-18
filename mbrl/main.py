@@ -244,7 +244,12 @@ if __name__ == "__main__":
     if "device" in params:
         if "cuda" in params.device:
             if torch.cuda.is_available():
+                print(
+                    f"Using CUDA device {torch.cuda.current_device()} with compute capability {torch.cuda.get_device_capability(0)}"
+                )
                 torch_helpers.device = torch.device(params.device)
+            else:
+                print("CUDA is not available")
         else:
             torch_helpers.device = torch.device(params.device)
 
