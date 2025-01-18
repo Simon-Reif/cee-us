@@ -19,7 +19,7 @@ env_params:
 
 forward_model_init: 
     pretrainer: null
-    pickle_path: "results/cee_us/construction/gnn_ensemble_cee_us_freeplay/checkpoints_050/forward_model"
+    pickle_path: "results/cee_us/construction/gnn_ensemble_cee_us_freeplay/checkpoints_latest/forward_model"
 
 # You can set the seed here in the following line!
 # seed: 999
