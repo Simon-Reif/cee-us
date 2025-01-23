@@ -24,12 +24,20 @@ eval_buffers: [
   "datasets/construction/rollouts_eval"
 ]
 
-number_of_rollouts: 20
-training_iterations: 300
+# number_of_rollouts: 20
+# training_iterations: 300
+#for testing
+number_of_rollouts: 1
+training_iterations: 3
+
+#to speed up data generation
+# number_of_rollouts: 20
+# training_iterations: 300
 
 rollout_params:
     render: false
-    task_horizon: 100
+    #task_horizon: 100
+    task_horizon: 10
 
 horizon: 30
 
