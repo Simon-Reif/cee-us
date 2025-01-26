@@ -19,7 +19,7 @@ env_params:
 
 forward_model_init: 
     pretrainer: null
-    pickle_path: "results/cee_us/construction/gnn_ensemble_cee_us_freeplay/checkpoints_225/forward_model"
+    pickle_path: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/forward_model"
     #pickle_path: "results/cee_us/construction/gnn_ensemble_cee_us_freeplay/checkpoints_latest/forward_model"
 
 # You can set the seed here in the following line!
@@ -28,6 +28,6 @@ forward_model_init:
 number_of_rollouts: 100
 
 # working_dir: "results/cee_us/zero_shot/construction_stack/gnn_ensemble_icem"
-working_dir: "results/cee_us/zero_shot/225iters/construction_stack/gnn_ensemble_icem"
+working_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_stack/gnn_ensemble_icem"
 
 device: "cuda:0"
