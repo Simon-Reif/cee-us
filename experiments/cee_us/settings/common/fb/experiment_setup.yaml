@@ -1,0 +1,15 @@
+rollouts_dir: None
+working_dir: None
+# from MetaMotivo Code
+num_train_steps: 3_000_000
+log_every_updates: 10_000
+checkpoint_every_steps: 1_000_000
+
+num_eval_episodes: 10
+# number of samples to estimate zr
+num_inference_samples: 50_000
+eval_every_steps: 100_000
+# "cases" in env_params
+eval_tasks: ["PickAndPlace", "Singletower", "Flip", "Slide"]
+
+device: "cuda"

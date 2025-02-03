@@ -1,49 +1,26 @@
+import math
+import gym
 import torch
+import torch.nn.functional as F
 from torch.distributions.cauchy import Cauchy
 from abc import ABC, abstractmethod
 
+from mbrl.base_types import Env
 from mbrl.controllers.abstract_controller import TrainableController
 from mbrl.models.fb_models import ForwardMap, BackwardMap
 from mbrl.rolloutbuffer import RolloutBuffer
-
-
-
-class ActionDiscretization(ABC):
-    def __init__(self):
-        pass
-    @abstractmethod
-    def num_actions(self):
-        pass
-    @abstractmethod
-    def get_action_space_discrete(self):
-        pass
-    @abstractmethod
-    def get_action_space_continuous(self):
-        return self.disc_to_cont(self.get_action_space_discrete)
-    @abstractmethod
-    def disc_to_cont(self, action):
-        pass
-    
-# settings from fb/controllable_agent/discrete_action_robots_modules/robots.py
-class FB_FetchReachActions(ActionDiscretization):
-    def __init__(self):
-        super().__init__()
-
-    def num_actions(self):
-        return self.action_space_discrete
-    def get_action_space_discrete(self):
-        return self.action_space_discrete
-    def disc_to_cont(self, action):
-        return action
+from mbrl import allogger, torch_helpers
 
 
 class ForwardBackwardController(TrainableController):
     def __init__(self, env, params, **kwargs):
         super().__init__(**kwargs)
+        self.logger = allogger.get_logger(scope=self.__class__.__name__, default_outputs=["tensorboard"])
+
         self.embed_dim = params.embed_dim
         # TODO: preprocessing, change this
         self.obs_dim = env.observation_space.shape[0]
-        self.action_discretization = ActionDiscretization()
+        # TODO: maybe save dict of different z_r for different tasks
         self.z_r = None
         # to refine z_r in multiple steps
         self.n_zr_estim_samples=0
@@ -70,10 +47,6 @@ class ForwardBackwardController(TrainableController):
         b_params = [param for param in self.backward_network.parameters()]
         self.fb_optim = torch.optim.Adam(f_params + b_params, lr=params.lr)
 
-
-    
-    def set_action_discretization(self, action_discretization):
-        self.action_discretization = action_discretization
     
     def set_forward_map(self, forward_map):
         self.forward_network = forward_map
@@ -81,20 +54,44 @@ class ForwardBackwardController(TrainableController):
         self.backward_network = backward_map
     
     # fits F, B to data from rollout_buffer
-    def train(self, rollout_buffer):
+    # metrics dict for tensorboard
+    def train(self, rollout_buffer, metrics):
         pass
+    
+    # for calculating zr s for different tasks with same offline data
+    @torch.no_grad()
+    def calculate_Bs(self, observation_list: torch.Tensor)->torch.Tensor:
+        #observation_list=torch.tensor(observation_list, device=torch_helpers.device)
+        bs=self.backward_network(observation_list)
+        return bs
+
+    @torch.no_grad()
+    def estimate_z_r(self, obs, actions, next_obs, env: Env, bs=None, wr=True):
+        if bs is None:
+            bs = self.calculate_Bs(next_obs)
+        rewards = -env.cost_fn(obs, actions, next_obs).to(torch_helpers.device)
+        if wr:
+            rewards = rewards*F.softmax(10 * rewards, dim=0)
+        z_r=torch.matmul(rewards.T, bs)
+        return self.project_z(z_r)
+
+
+    def project_z(self, z):
+        return math.sqrt(z.shape[-1]) * F.normalize(z, dim=-1)
+
 
     # fits z_r to compute_reward() given by env using data from rollout_buffer
     # see FB paper 23
     # TODO: maybe parameter for size of buffer to use
+    # TODO: next obs instead of obs
     def policy_parameter_estimation(self, env, rollout_buffer, start_from_current_zr=False):
         #TODO: fit this to rollout_buffer specification
         with torch.no_grad():
             obs=torch.tensor(rollout_buffer.as_array("observations"))
             obs=torch.flatten(obs, end_dim=1)
             b_obs=self.backward_network(obs)
-            r_obs=
             sum_representations = torch.sum([self.backward_network(obs) * env.compute_reward(obs) for obs in range(rollout_buffer.flat)], dim=0)
+            # TODO maybe change for dict of z_rs for different tasks
             if start_from_current_zr:
                 if self.z_r is None:
                     self.z_r = 0

@@ -317,7 +317,17 @@ class output_to_tensors(Decorator):
             new_outputs = tuple([to_tensor(item) for item in outputs])
             return new_outputs
         return outputs
-
+    
+# noinspection PyPep8Naming
+class output_to_tensors_device(Decorator):
+    def __call__(self, *args, **kwargs):
+        outputs = self.func(*args, **kwargs)
+        if isinstance(outputs, np.ndarray):
+            return to_tensor(outputs)
+        if isinstance(outputs, tuple):
+            new_outputs = tuple([to_tensor(item).to(device) for item in outputs])
+            return new_outputs
+        return outputs
 
 # noinspection PyPep8Naming
 class input_to_numpy(Decorator):
