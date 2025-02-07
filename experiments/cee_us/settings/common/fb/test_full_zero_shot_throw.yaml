@@ -1,0 +1,135 @@
+#experiments/defaults.yaml
+pre_mainloop_hooks: []
+post_mainloop_hooks: []
+pre_rollout_hooks: []
+post_rollout_hooks: []
+pre_model_learning_hooks: []
+post_model_learning_hooks: []
+pre_controller_learning_hooks: []
+post_controller_learning_hooks: []
+
+post_rollout_hooks: []
+#experiments/cee_us/settings/common/basic.yaml
+rollout_params:
+  render: false
+  render_initial: false
+  render_eval: false
+  record: false
+  only_final_reward: false
+  use_env_states: true
+  logging: true
+
+initial_controller: "none"
+initial_controller_params: {}
+initial_number_of_rollouts: 0
+number_of_rollouts: 5
+append_data: true
+append_data_eval: false
+training_iterations: 500
+plot_model_accuracy: false
+forward_model: "none"
+model_breakdown_above: 0.1
+evaluation_rollouts: 0
+
+checkpoints:
+  load: false
+  save: true
+  save_every_n_iter: 50
+  restart_every_n_iter: null
+
+device: "cpu"
+#experiments/cee_us/settings/construction/zero_shot_generalization/common/controller_stack.yaml
+env: "FetchPickAndPlaceConstruction"
+env_params:
+  sparse: False
+  shaped_reward: true
+  num_blocks: 2
+  stack_only: true
+  case: "Singletower"
+  visualize_target: true
+  visualize_mocap: false
+
+rollout_params:
+  render: false
+  render_initial: false
+  render_eval: false
+  record: false
+  only_final_reward: false
+  use_env_states: true
+  logging: true
+  task_horizon: 600
+
+controller: "mpc-icem-torch"
+controller_params:
+  horizon: 30
+  num_simulated_trajectories: 128
+  factor_decrease_num: 1
+  cost_along_trajectory: "best"
+  use_env_reward: false
+  action_sampler_params: 
+    opt_iterations: 3
+    elites_size: 10
+    alpha: 0.1
+    init_std: 0.5
+    relative_init: true
+    execute_best_elite: true
+    keep_previous_elites: true
+    shift_elites_over_time: true
+    finetune_first_action: false
+    fraction_elites_reused: 0.3
+    use_mean_actions: false
+    colored_noise: true
+    noise_beta: 3.5
+    use_ensemble_cost_std: false
+  verbose: false
+  do_visualize_plan: false
+  use_async_action: false
+  logging: true
+
+initial_controller: "none"
+initial_controller_params: {}
+initial_number_of_rollouts: 0
+
+number_of_rollouts: 100
+training_iterations: 1
+
+append_data: true
+append_data_eval: false
+
+checkpoints:
+  load: false
+  save: true
+  save_every_n_iter: 2
+  restart_every_n_iter: null
+
+device: "cuda:0"
+
+working_dir: "experiments/results/cee_us/zero_shot/stack"
+#experiments/cee_us/settings/construction/zero_shot_generalization/gnn_ensemble_cee_us_zero_shot_stack.yaml
+env_params:
+  num_blocks: 2
+  case: "Singletower"
+# Another option is case: "Multitower" (with num_blocks: 4)
+
+# Make sure the settings for the model specified in 
+# "experiments/cee_us/settings/construction/zero_shot_generalization/common/basic_gnn_ensemble_zero_shot.yaml"
+# and the loaded model settings match! You can also overwrite the forward_model_params in this file!
+# forward_model_params:
+#    model_params: 
+#       ...
+
+forward_model_init: 
+    pretrainer: null
+    pickle_path: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/forward_model"
+    #pickle_path: "results/cee_us/construction/gnn_ensemble_cee_us_freeplay/checkpoints_latest/forward_model"
+
+# You can set the seed here in the following line!
+# seed: 999
+
+number_of_rollouts: 100
+
+# working_dir: "results/cee_us/zero_shot/construction_stack/gnn_ensemble_icem"
+working_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_stack/gnn_ensemble_icem"
+
+device: "cuda:0"
+

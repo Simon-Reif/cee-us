@@ -1,15 +1,18 @@
-rollouts_dir: None
+#from where to load training rollouts
+training_data_dir: None
 working_dir: None
 # from MetaMotivo Code
 num_train_steps: 3_000_000
 log_every_updates: 10_000
 checkpoint_every_steps: 1_000_000
 
-num_eval_episodes: 10
+# have to use this name to use gen_rollouts function
+#num_eval_episodes: 10
+number_of_rollouts: 10
 # number of samples to estimate zr
 num_inference_samples: 50_000
 eval_every_steps: 100_000
 # "cases" in env_params
-eval_tasks: ["PickAndPlace", "Singletower", "Flip", "Slide"]
+eval_tasks: ["Singletower", "PickAndPlace", "Flip", "Slide"]
 
-device: "cuda"
+device: "cuda:0"

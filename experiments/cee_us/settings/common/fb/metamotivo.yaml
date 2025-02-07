@@ -28,10 +28,7 @@ actor_reg_coef: 0.01
 # samples to estimate zr
 num_samples_per_inference: 100000
 
-#number of z samples in "gpi" score
-num_gpi: 10
-# setting described in paper
-w_sampling: cauchy_ball
+
 # highest number shown in paper for FetchReach
 reg_coef: 1.0
 n_epochs: 2

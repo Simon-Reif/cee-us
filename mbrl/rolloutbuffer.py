@@ -6,9 +6,6 @@ import torch
 from forwardable import def_delegators, forwardable
 from sklearn.model_selection import train_test_split
 
-from mbrl import torch_helpers
-
-
 @forwardable()
 class Rollout(object):
     allowed_fields = {
@@ -249,8 +246,9 @@ class RolloutBuffer(abc.Sequence):
         else:
             return self.rollouts[item]
         
-    @torch_helpers.output_to_tensors_device
     def get_random_transitions(self, num_samples):
+        if num_samples > len(self):
+            raise ValueError(f"Requested {num_samples} samples, but only {len(self)} available.")
         obs=self.as_array("observations")
         actions=self.as_array("actions")
         next_obs=self.as_array("next_observations")
@@ -259,7 +257,6 @@ class RolloutBuffer(abc.Sequence):
         actions_flat=actions.reshape(-1, actions.shape[-1])
         indices=np.random.choice(obs_flat.shape[0], num_samples, replace=False)
         return obs_flat[indices], actions_flat[indices], next_obs_flat[indices]
-
 
 
     @property

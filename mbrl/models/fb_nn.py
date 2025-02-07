@@ -1,27 +1,155 @@
-import numbers
-import numpy as np
-import math
+# adopted from https://github.com/facebookresearch/metamotivo
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This source code is licensed under the CC BY-NC 4.0 license found in the
+# LICENSE file in the root directory of this source tree.
+
 import torch
-import torch.nn as nn
+from torch import nn
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
+import numpy as np
 import torch.nn.functional as F
+import numbers
+import math
+from typing import Any
 
-# code adapted from FB Paper
-# maybe replace with more complex models
 
-# for ensemble of ForwardMaps
+##########################
+# Initialization utils
+##########################
+
+# Initialization for parallel layers
+def parallel_orthogonal_(tensor, gain=1):
+    if tensor.ndimension() == 2:
+        tensor = nn.init.orthogonal_(tensor, gain=gain)
+        return tensor
+    if tensor.ndimension() < 3:
+        raise ValueError("Only tensors with 3 or more dimensions are supported")
+    n_parallel = tensor.size(0)
+    rows = tensor.size(1)
+    cols = tensor.numel() // n_parallel // rows
+    flattened = tensor.new(n_parallel, rows, cols).normal_(0, 1)
+
+    qs = []
+    for flat_tensor in torch.unbind(flattened, dim=0):
+        if rows < cols:
+            flat_tensor.t_()
+
+        # Compute the qr factorization
+        q, r = torch.linalg.qr(flat_tensor)
+        # Make Q uniform according to https://arxiv.org/pdf/math-ph/0609050.pdf
+        d = torch.diag(r, 0)
+        ph = d.sign()
+        q *= ph
+
+        if rows < cols:
+            q.t_()
+        qs.append(q)
+
+    qs = torch.stack(qs, dim=0)
+    with torch.no_grad():
+        tensor.view_as(qs).copy_(qs)
+        tensor.mul_(gain)
+    return tensor
+
+def weight_init(m):
+    if isinstance(m, nn.Linear):
+        nn.init.orthogonal_(m.weight.data)
+        if hasattr(m.bias, "data"):
+            m.bias.data.fill_(0.0)
+    elif isinstance(m, DenseParallel):
+        gain = nn.init.calculate_gain("relu")
+        parallel_orthogonal_(m.weight.data, gain)
+        if hasattr(m.bias, "data"):
+            m.bias.data.fill_(0.0)
+    elif hasattr(m, "reset_parameters"):
+        m.reset_parameters()
+
+
+##########################
+# Update utils
+##########################
+
+def _soft_update_params(net_params: Any, target_net_params: Any, tau: float):
+    torch._foreach_mul_(target_net_params, 1 - tau)
+    torch._foreach_add_(target_net_params, net_params, alpha=tau)
+
+def soft_update_params(net, target_net, tau) -> None:
+    tau = float(min(max(tau, 0), 1))
+    net_params = tuple(x.data for x in net.parameters())
+    target_net_params = tuple(x.data for x in target_net.parameters())
+    _soft_update_params(net_params, target_net_params, tau)
+
+class eval_mode:
+    def __init__(self, *models) -> None:
+        self.models = models
+        self.prev_states = []
+
+    def __enter__(self) -> None:
+        self.prev_states = []
+        for model in self.models:
+            self.prev_states.append(model.training)
+            model.train(False)
+
+    def __exit__(self, *args) -> None:
+        for model, state in zip(self.models, self.prev_states):
+            model.train(state)
+
+
+##########################
+# Creation utils
+##########################
+
+def build_backward(obs_dim, z_dim, cfg):
+    return BackwardMap(obs_dim, z_dim, cfg.hidden_dim, cfg.hidden_layers, cfg.norm)
+
+def build_forward(obs_dim, z_dim, action_dim, cfg, output_dim=None):
+    if cfg.ensemble_mode == "seq":
+        return SequetialFMap(obs_dim, z_dim, action_dim, cfg)
+    elif cfg.ensemble_mode == "vmap":
+        raise NotImplementedError("vmap ensemble mode is currently not supported")
+    
+    assert cfg.ensemble_mode == "batch", "Invalid value for ensemble_mode. Use {'batch', 'seq', 'vmap'}"
+    return _build_batch_forward(obs_dim, z_dim, action_dim, cfg, output_dim)
+    
+def _build_batch_forward(obs_dim, z_dim, action_dim, cfg, output_dim=None, parallel=True):
+    if cfg.model == "residual":
+        forward_cls = ResidualForwardMap
+    elif cfg.model == "simple":
+        forward_cls = ForwardMap
+    else:
+        raise ValueError(f"Unsupported forward_map model {cfg.model}")
+    num_parallel = cfg.num_parallel if parallel else 1
+    return forward_cls(obs_dim, z_dim, action_dim, cfg.hidden_dim, cfg.hidden_layers, cfg.embedding_layers, num_parallel, output_dim)
+
+def build_actor(obs_dim, z_dim, action_dim, cfg):
+    if cfg.model == "residual":
+        actor_cls = ResidualActor
+    elif cfg.model == "simple":
+        actor_cls = Actor
+    else:
+        raise ValueError(f"Unsupported actor model {cfg.model}")
+    return actor_cls(obs_dim, z_dim, action_dim, cfg.hidden_dim, cfg.hidden_layers, cfg.embedding_layers)
+
+def build_discriminator(obs_dim, z_dim, cfg):
+    return Discriminator(obs_dim, z_dim, cfg.hidden_dim, cfg.hidden_layers)
+
 def linear(input_dim, output_dim, num_parallel=1):
     if num_parallel > 1:
         return DenseParallel(input_dim, output_dim, n_parallel=num_parallel)
     return nn.Linear(input_dim, output_dim) 
+
 def layernorm(input_dim, num_parallel=1):
     if num_parallel > 1:
         return ParallelLayerNorm([input_dim], n_parallel=num_parallel)
     return nn.LayerNorm(input_dim)
 
 
-# Obs -> Embedding
+##########################
+# Simple MLP models
+##########################
+
 class BackwardMap(nn.Module):
     def __init__(self, goal_dim, z_dim, hidden_dim, hidden_layers: int = 2, norm=True) -> None:
         super().__init__()
@@ -37,7 +165,6 @@ class BackwardMap(nn.Module):
         return self.net(x)
 
 
-# for ensemble of ForwardMaps
 def simple_embedding(input_dim, hidden_dim, hidden_layers, num_parallel=1):
     assert hidden_layers >= 2, "must have at least 2 embedding layers"
     seq = [linear(input_dim, hidden_dim, num_parallel), layernorm(hidden_dim, num_parallel), nn.Tanh()]
@@ -47,7 +174,6 @@ def simple_embedding(input_dim, hidden_dim, hidden_layers, num_parallel=1):
     return nn.Sequential(*seq)
 
 
-# Obs x Action x Embedding -> Embedding
 class ForwardMap(nn.Module):
     def __init__(self, obs_dim, z_dim, action_dim, hidden_dim, hidden_layers: int = 1, 
                  embedding_layers: int = 2, num_parallel: int = 2, output_dim=None) -> None:
@@ -73,7 +199,19 @@ class ForwardMap(nn.Module):
         z_embedding = self.embed_z(torch.cat([obs, z], dim=-1)) # num_parallel x bs x h_dim // 2
         sa_embedding = self.embed_sa(torch.cat([obs, action], dim=-1)) # num_parallel x bs x h_dim // 2
         return self.Fs(torch.cat([sa_embedding, z_embedding], dim=-1))
-    
+
+
+class SequetialFMap(nn.Module):
+    def __init__(self, obs_dim, z_dim, action_dim, cfg, output_dim=None):
+        super().__init__()
+        self.models = nn.ModuleList([_build_batch_forward(obs_dim, z_dim, action_dim, 
+                                                          cfg, output_dim, parallel=False) for _ in range(cfg.num_parallel)])
+
+    def forward(self, obs: torch.Tensor, z: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+        predictions = [model(obs, z, action) for model in self.models]
+        return torch.stack(predictions)
+
+
 class Actor(nn.Module):
     def __init__(self, obs_dim, z_dim, action_dim, hidden_dim, hidden_layers: int = 1, 
                  embedding_layers: int = 2) -> None:
@@ -97,17 +235,118 @@ class Actor(nn.Module):
         dist = TruncatedNormal(mu, std)
         return dist
 
-    
-### Helper Modules
-class Norm(nn.Module):
 
-    def __init__(self) -> None:
+class Discriminator(nn.Module):
+    def __init__(self, obs_dim, z_dim, hidden_dim, hidden_layers) -> None:
+        super().__init__()
+        seq = [nn.Linear(obs_dim + z_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Tanh()]
+        for _ in range(hidden_layers-1):
+            seq += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
+        seq += [nn.Linear(hidden_dim, 1)]
+        self.trunk = nn.Sequential(*seq)
+
+    def forward(self, obs: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
+        s = self.compute_logits(obs, z)
+        return torch.sigmoid(s)
+
+    def compute_logits(self, obs: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
+        x = torch.cat([z, obs], dim=1)
+        logits = self.trunk(x)
+        return logits
+
+    def compute_reward(self, obs: torch.Tensor, z: torch.Tensor, eps: float = 1e-7) -> torch.Tensor:
+        s = self.forward(obs, z)
+        s = torch.clamp(s, eps, 1 - eps)
+        reward = s.log() - (1 - s).log()
+        return reward
+
+
+##########################
+# Residual models
+##########################
+
+class ResidualBlock(nn.Module):
+    def __init__(self, dim, num_parallel: int = 1):
+        super().__init__()
+        ln = layernorm(dim, num_parallel)
+        lin = linear(dim, dim, num_parallel)
+        self.mlp = nn.Sequential(ln, lin, nn.Mish())
+
+    def forward(self, x):
+        return x + self.mlp(x)
+
+
+class Block(nn.Module):
+    def __init__(self, input_dim, output_dim, activation, num_parallel: int = 1):
+        super().__init__()
+        ln = layernorm(input_dim, num_parallel)
+        lin = linear(input_dim, output_dim, num_parallel)
+        seq = [ln, lin] + ([nn.Mish()] if activation else [])
+        self.mlp = nn.Sequential(*seq)
+
+    def forward(self, x):
+        return self.mlp(x)
+
+
+def residual_embedding(input_dim, hidden_dim, hidden_layers, num_parallel=1):
+    assert hidden_layers >= 2, "must have at least 2 embedding layers"
+    seq = [Block(input_dim, hidden_dim, True, num_parallel)]
+    for _ in range(hidden_layers-2):
+        seq += [ResidualBlock(hidden_dim, num_parallel)]
+    seq += [Block(hidden_dim, hidden_dim // 2, True, num_parallel)]
+    return nn.Sequential(*seq)
+
+
+class ResidualForwardMap(nn.Module):
+    def __init__(self, obs_dim, z_dim, action_dim, hidden_dim, hidden_layers: int = 1, 
+                 embedding_layers: int = 2, num_parallel: int = 2, output_dim=None) -> None:
+        super().__init__()
+        self.z_dim = z_dim
+        self.num_parallel = num_parallel
+        self.hidden_dim = hidden_dim
+
+        self.embed_z = residual_embedding(obs_dim + z_dim, hidden_dim, embedding_layers, num_parallel)
+        self.embed_sa = residual_embedding(obs_dim + action_dim, hidden_dim, embedding_layers, num_parallel)
+
+        seq = [ResidualBlock(hidden_dim, num_parallel) for _ in range(hidden_layers)]
+        seq += [Block(hidden_dim, output_dim if output_dim else z_dim, False, num_parallel)]
+        self.Fs = nn.Sequential(*seq)
+    
+    def forward(self, obs: torch.Tensor, z: torch.Tensor, action: torch.Tensor):
+        if self.num_parallel > 1:
+            obs = obs.expand(self.num_parallel, -1, -1)
+            z = z.expand(self.num_parallel, -1, -1)
+            action = action.expand(self.num_parallel, -1, -1)
+        z_embedding = self.embed_z(torch.cat([obs, z], dim=-1)) # num_parallel x bs x h_dim // 2
+        sa_embedding = self.embed_sa(torch.cat([obs, action], dim=-1)) # num_parallel x bs x h_dim // 2
+        return self.Fs(torch.cat([sa_embedding, z_embedding], dim=-1))
+
+
+class ResidualActor(nn.Module):
+    def __init__(self, obs_dim, z_dim, action_dim, hidden_dim, hidden_layers: int = 1, 
+                 embedding_layers: int = 2) -> None:
         super().__init__()
 
-    def forward(self, x) -> torch.Tensor:
-        return math.sqrt(x.shape[-1]) * F.normalize(x, dim=-1)
-    
-# for Ensemble ForwardMap
+        self.embed_z = residual_embedding(obs_dim + z_dim, hidden_dim, embedding_layers)
+        self.embed_s = residual_embedding(obs_dim, hidden_dim, embedding_layers)
+
+        seq = [ResidualBlock(hidden_dim) for _ in range(hidden_layers)] + [Block(hidden_dim, action_dim, False)]
+        self.policy = nn.Sequential(*seq)
+
+    def forward(self, obs, z, std):
+        z_embedding = self.embed_z(torch.cat([obs, z], dim=-1)) # bs x h_dim // 2
+        s_embedding = self.embed_s(obs) # bs x h_dim // 2
+        embedding = torch.cat([s_embedding, z_embedding], dim=-1)
+        mu = torch.tanh(self.policy(embedding))
+        std = torch.ones_like(mu) * std
+        dist = TruncatedNormal(mu, std)
+        return dist
+
+
+##########################
+# Helper modules
+##########################
+
 class DenseParallel(nn.Module):
     def __init__(
         self,
@@ -174,7 +413,7 @@ class DenseParallel(nn.Module):
         return "in_features={}, out_features={}, n_parallel={}, bias={}".format(
             self.in_features, self.out_features, self.n_parallel, self.bias is not None
         )
-    
+
 
 class ParallelLayerNorm(nn.Module):
     def __init__(self, normalized_shape, n_parallel, eps=1e-5, elementwise_affine=True,
@@ -253,3 +492,12 @@ class TruncatedNormal(pyd.Normal):
             eps = torch.clamp(eps, -clip, clip)
         x = self.loc + eps
         return self._clamp(x)
+
+
+class Norm(nn.Module):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x) -> torch.Tensor:
+        return math.sqrt(x.shape[-1]) * F.normalize(x, dim=-1)

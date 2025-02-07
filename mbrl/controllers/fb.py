@@ -1,5 +1,5 @@
+#adapts https://github.com/facebookresearch/metamotivo
 import math
-import gym
 import torch
 import torch.nn.functional as F
 from torch.distributions.cauchy import Cauchy
@@ -7,51 +7,85 @@ from abc import ABC, abstractmethod
 
 from mbrl.base_types import Env
 from mbrl.controllers.abstract_controller import TrainableController
-from mbrl.models.fb_models import ForwardMap, BackwardMap
+from mbrl.models.fb_model import FBModel
+from mbrl.models.fb_nn import ForwardMap, BackwardMap, weight_init
 from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl import allogger, torch_helpers
 
 
 class ForwardBackwardController(TrainableController):
-    def __init__(self, env, params, **kwargs):
+    def __init__(self, params, obs_dim, action_dim, **kwargs):
         super().__init__(**kwargs)
         self.logger = allogger.get_logger(scope=self.__class__.__name__, default_outputs=["tensorboard"])
-
-        self.embed_dim = params.embed_dim
-        # TODO: preprocessing, change this
-        self.obs_dim = env.observation_space.shape[0]
-        # TODO: maybe save dict of different z_r for different tasks
+        self.z_dim = params.model.z_dim
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
         self.z_r = None
-        # to refine z_r in multiple steps
-        self.n_zr_estim_samples=0
-        # TODO: preprocessing, change this
-        self.obs_dim = env.observation_space.shape[0]
+        self._model = FBModel(params.model, obs_dim, action_dim)
+        self.params = params #controller_params
+        self.setup_training()
+        self.setup_compile()
+        self._model.to(torch_helpers.device)
 
-        self.forward_network = ForwardMap(obs_dim=self.obs_dim, embed_dim=self.embed_dim, action_dim=self.action_discretization.num_actions())
-        self.backward_network = BackwardMap(obs_dim=self.obs_dim, embed_dim=self.embed_dim)
-        # value 0.5 from paper
-        self.cauchy = Cauchy(torch.tensor([0.0]), torch.tensor([0.5]))
-        self.forward_target_network = ForwardMap(obs_dim=self.obs_dim, embed_dim=self.embed_dim, action_dim=self.action_discretization.num_actions())
-        self.backward_target_network = BackwardMap(obs_dim=self.obs_dim, embed_dim=self.embed_dim)
-        # load the weights into the target networks
-        self.forward_target_network.load_state_dict(self.forward_network.state_dict())
-        self.backward_target_network.load_state_dict(self.backward_network.state_dict())
-        # if use gpu
-        if params.cuda:
-            self.forward_network.cuda()
-            self.backward_network.cuda()
-            self.forward_target_network.cuda()
-            self.backward_target_network.cuda()
-        # create the optimizer
-        f_params = [param for param in self.forward_network.parameters()]
-        b_params = [param for param in self.backward_network.parameters()]
-        self.fb_optim = torch.optim.Adam(f_params + b_params, lr=params.lr)
+
+    def setup_training(self) -> None:
+        self._model.train(True)
+        self._model.requires_grad_(True)
+        self._model.apply(weight_init)
+        self._model._prepare_for_train()  # ensure that target nets are initialized after applying the weights
+
+        self.backward_optimizer = torch.optim.Adam(
+            self._model._backward_map.parameters(),
+            lr=self.params.train.lr_b,
+            capturable=self.params.cudagraphs and not self.params.compile,
+            weight_decay=self.params.train.weight_decay,
+        )
+        self.forward_optimizer = torch.optim.Adam(
+            self._model._forward_map.parameters(),
+            lr=self.params.train.lr_f,
+            capturable=self.params.cudagraphs and not self.params.compile,
+            weight_decay=self.params.train.weight_decay,
+        )
+        self.actor_optimizer = torch.optim.Adam(
+            self._model._actor.parameters(),
+            lr=self.params.train.lr_actor,
+            capturable=self.params.cudagraphs and not self.params.compile,
+            weight_decay=self.params.train.weight_decay,
+        )
+
+        # prepare parameter list
+        self._forward_map_paramlist = tuple(x for x in self._model._forward_map.parameters())
+        self._target_forward_map_paramlist = tuple(x for x in self._model._target_forward_map.parameters())
+        self._backward_map_paramlist = tuple(x for x in self._model._backward_map.parameters())
+        self._target_backward_map_paramlist = tuple(x for x in self._model._target_backward_map.parameters())
+
+        # precompute some useful variables
+        self.off_diag = 1 - torch.eye(self.params.train.batch_size, self.params.train.batch_size, device=torch_helpers.device)
+        self.off_diag_sum = self.off_diag.sum()
 
     
-    def set_forward_map(self, forward_map):
-        self.forward_network = forward_map
-    def set_backward_map(self, backward_map):
-        self.backward_network = backward_map
+    def setup_compile(self):
+        print(f"compile {self.params.compile}")
+        if self.params.compile:
+            mode = "reduce-overhead" if not self.params.cudagraphs else None
+            print(f"compiling with mode '{mode}'")
+            self.update_fb = torch.compile(self.update_fb, mode=mode)  # use fullgraph=True to debug for graph breaks
+            self.update_actor = torch.compile(self.update_actor, mode=mode)  # use fullgraph=True to debug for graph breaks
+            self.sample_mixed_z = torch.compile(self.sample_mixed_z, mode=mode, fullgraph=True)
+
+        print(f"cudagraphs {self.params.cudagraphs}")
+        # if self.params.cudagraphs:
+        #     from tensordict.nn import CudaGraphModule
+
+        #     self.update_fb = CudaGraphModule(self.update_fb, warmup=5)
+        #     self.update_actor = CudaGraphModule(self.update_actor, warmup=5)
+
+    def act(self, obs: torch.Tensor, z: torch.Tensor, mean: bool = True) -> torch.Tensor:
+        return self._model.act(obs, z, mean)
+
+
+    def set_zr(self, z_r):
+        self.z_r = z_r
     
     # fits F, B to data from rollout_buffer
     # metrics dict for tensorboard
@@ -60,9 +94,9 @@ class ForwardBackwardController(TrainableController):
     
     # for calculating zr s for different tasks with same offline data
     @torch.no_grad()
-    def calculate_Bs(self, observation_list: torch.Tensor)->torch.Tensor:
+    def calculate_Bs(self, next_obs: torch.Tensor)->torch.Tensor:
         #observation_list=torch.tensor(observation_list, device=torch_helpers.device)
-        bs=self.backward_network(observation_list)
+        bs=self.backward_network(next_obs)
         return bs
 
     @torch.no_grad()
@@ -80,42 +114,17 @@ class ForwardBackwardController(TrainableController):
         return math.sqrt(z.shape[-1]) * F.normalize(z, dim=-1)
 
 
-    # fits z_r to compute_reward() given by env using data from rollout_buffer
-    # see FB paper 23
-    # TODO: maybe parameter for size of buffer to use
-    # TODO: next obs instead of obs
-    def policy_parameter_estimation(self, env, rollout_buffer, start_from_current_zr=False):
-        #TODO: fit this to rollout_buffer specification
-        with torch.no_grad():
-            obs=torch.tensor(rollout_buffer.as_array("observations"))
-            obs=torch.flatten(obs, end_dim=1)
-            b_obs=self.backward_network(obs)
-            sum_representations = torch.sum([self.backward_network(obs) * env.compute_reward(obs) for obs in range(rollout_buffer.flat)], dim=0)
-            # TODO maybe change for dict of z_rs for different tasks
-            if start_from_current_zr:
-                if self.z_r is None:
-                    self.z_r = 0
-                self.z_r = (self.n_zr_estim_samples*self.z_r + sum_representations)/ (self.n_zr_estim_samples + rollout_buffer.size())
-                self.n_zr_estim_samples += rollout_buffer.size()
-            else:
-                self.z_r = sum_representations / rollout_buffer.size()
-                self.n_zr_estim_samples = rollout_buffer.size()
-
     # save forward, backward separately
     # save z_r if it exists
     # save action_discretization
     def save(self, path):
         pass
 
-    def get_action(self, obs):
+    def get_action(self, obs, state=None, mode="train"):
         if self.z_r is None:
             raise AttributeError("z_r not set")
-        return self.get_action_from_parameter(obs, self.z_r)
+        return self.act(obs, self.z_r, mean=True)
 
-    def get_action_from_parameter(self, obs, z_r):
-        with torch.no_grad():
-            action_discrete=torch.argmax([self.forward_network(obs, a, z_r) for a in range(self.action_discretization.get_action_space_continuous())])
-            return self.action_discretization.disc_to_cont(action_discrete)
         
 '''
 RolloutBuffer:

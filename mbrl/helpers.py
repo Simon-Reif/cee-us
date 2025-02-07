@@ -254,6 +254,8 @@ def gen_rollouts(
     forward_model,
     iteration,
     do_initial_rollouts,
+    mode="train"
+
 ):
 
     if iteration == 0 and do_initial_rollouts:
@@ -275,8 +277,8 @@ def gen_rollouts(
             rollouts=rollout_man.sample(
                 controller,
                 render=render,
-                mode="train",
-                name="train",
+                mode=mode,
+                name=mode,
                 no_rollouts=number_of_rollouts,
             )
         )

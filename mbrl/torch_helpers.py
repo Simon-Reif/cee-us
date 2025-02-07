@@ -297,6 +297,9 @@ def to_numpy(x):
         return x.cpu().detach().numpy()
     else:
         return x
+    
+def to_tensor_device(*args):
+    return (to_tensor(arg).to(device) for arg in args)
 
 
 # noinspection PyPep8Naming
