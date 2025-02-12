@@ -244,7 +244,7 @@ class RolloutManager:
         else:
             ob = env.reset_with_mode(mode)
 
-        if policy.has_state:
+        if hasattr(policy, 'has_state') and policy.has_state:
             policy.beginning_of_rollout(
                 observation=ob,
                 state=RolloutManager.supply_env_state(env, use_env_states),
@@ -337,7 +337,7 @@ class RolloutManager:
                 if done:
                     break
 
-        if policy.has_state:
+        if hasattr(policy, "has_state") and policy.has_state:
             policy.end_of_rollout(total_time=steps, total_return=_return, mode=mode)
 
         if isinstance(env, RealRobotEnvInterface):

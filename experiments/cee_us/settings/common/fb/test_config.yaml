@@ -9,6 +9,7 @@ log_every_updates: 10_000
 #used in lieu of num_eval_episodes to use gen_rollouts function
 number_of_rollouts: 10
 
+#base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"
 env_params:
   sparse: False
@@ -18,7 +19,6 @@ env_params:
   case: "Singletower"
   visualize_target: true
   visualize_mocap: false
-
 rollout_params:
   render: false
   render_initial: false
@@ -40,6 +40,7 @@ controller_params:
     seq_length: 1
     archi:
       z_dim: 100
+      norm_z: true
       b:
         norm: true
         hidden_dim: 256
@@ -72,6 +73,8 @@ controller_params:
     clip_grad_norm: 0.0
     stddev_clip: 0.3
     q_loss_coef: 0.0
+    fb_target_tau: 0.01
+
 
   
 eval:
@@ -79,7 +82,63 @@ eval:
   # number of samples to estimate zr
   num_inference_samples: 50_000
   eval_every_steps: 100_000
-  # "cases" in env_params
-  eval_tasks: ["Singletower", "PickAndPlace", "Flip", "Slide"]
+  # "Throw" translates into "Slide" in env_params.case
+  eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]
+
+#configs from 
+#experiments/cee_us/settings/construction/zero_shot_generalization/common/controller_<task>.yaml
+#with num_blocks: 2 for all
+eval_envs:
+  PickAndPlace:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: false
+      case: "PickAndPlace"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 400
+  Singletower:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: False
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: true
+      case: "Singletower"
+      visualize_target: true
+      visualize_mocap: false
+
+    rollout_params:
+      task_horizon: 600
+  # "Slide" stands for "Throw"
+  Throw:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: true
+      case: "Slide"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 200
+  Flip:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: true
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: false
+      case: "Flip" 
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 500
+
+
   
 device: "cuda:0"

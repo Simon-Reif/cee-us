@@ -245,19 +245,18 @@ class RolloutBuffer(abc.Sequence):
             return tuple([self.rollouts[sub_item] for sub_item in item])
         else:
             return self.rollouts[item]
-        
+    
+    def sample(self, num_samples):
+        flat_rollouts = self.flat
+        len_rollouts = len(flat_rollouts)
+        if num_samples > len_rollouts:
+            raise ValueError(f"Requested {num_samples} samples, but only {len_rollouts} available.")
+        indices = np.random.choice(len_rollouts, num_samples, replace=False)
+        return flat_rollouts[indices]
+    
     def get_random_transitions(self, num_samples):
-        if num_samples > len(self):
-            raise ValueError(f"Requested {num_samples} samples, but only {len(self)} available.")
-        obs=self.as_array("observations")
-        actions=self.as_array("actions")
-        next_obs=self.as_array("next_observations")
-        obs_flat=obs.reshape(-1, obs.shape[-1])
-        next_obs_flat=next_obs.reshape(-1, next_obs.shape[-1])
-        actions_flat=actions.reshape(-1, actions.shape[-1])
-        indices=np.random.choice(obs_flat.shape[0], num_samples, replace=False)
-        return obs_flat[indices], actions_flat[indices], next_obs_flat[indices]
-
+        samples = self.sample(num_samples)
+        return samples["observations"], samples["actions"], samples["next_observations"]
 
     @property
     def mean_avg_reward(self):
