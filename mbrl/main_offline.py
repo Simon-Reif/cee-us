@@ -1,10 +1,11 @@
 import logging
 import os
 import pickle
-
 import numpy as np
 import torch
 from tqdm import tqdm
+from collections import defaultdict
+
 from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments import env_from_string
@@ -13,81 +14,8 @@ from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl.seeding import Seeding
-
-
-def calculate_success_rates(env, buffer: RolloutBuffer):
-    success_rate = []
-    for i in range(len(buffer)):
-        rollout_success = env.eval_success(buffer[i]["next_observations"])
-        stable_T = 5
-        if env.name == "FetchPickAndPlaceConstruction" and "tower" in env.case:
-            # Stack is only successful if we have a full tower! 
-            # Check if the tower is stable for at least 5 timesteps
-            dy = np.diff(rollout_success)
-            success = np.logical_and(rollout_success[1:]==env.num_blocks, dy==0)
-            success_rate.append(np.sum(success)>stable_T)
-        elif env.name == "FetchPickAndPlaceConstruction" and env.case == 'PickAndPlace':
-            # We determine success as highest number of solved elements with at least 5 timesteps of success
-            u, c = np.unique(rollout_success, return_counts = True)
-            # u: unique values, c: counts
-            count_of_highest_success = c[np.argmax(u)]    
-            success_rate.append(u[c>stable_T][-1]/env.nObj)
-        else:
-            # For flip, throw and Playground env push tasks: just get success at the end of rollout
-            success_rate.append(rollout_success[-1]/env.nObj)
-    #print("Success rate over {} rollouts in task {}, is {}".format(len(buffer), env.case, np.asarray(success_rate).mean()))#
-    return success_rate
-
-#self.logger = allogger.get_logger(scope=self.__class__.__name__, default_outputs=["tensorboard"])
-#self.logger.log(torch.min(self.costs_).item(), key="best_trajectory_cost")
-
-def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, params, t=None):
-    #eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
-    """"
-    num_eval_episodes: 10
-    num_inference_samples: 50_000
-    eval_tasks: None
-    """
-    # TODO: maybe inference_batch_size parameter necessary
-    if t is not None:
-        print(f"Evaluation at iteration {t}")
-    obs, actions, next_obs = torch_helpers.to_tensor_device(*offline_data.get_random_transitions(params.eval.num_inference_samples))
-    bs=controller.calculate_Bs(next_obs)
-    results={}
-    z_rs={}
-    for task in params.eval.eval_tasks:
-        #TODO: load entire task settings, and task horizon from rollout params
-        task_params=params.eval_envs[task]
-        env=task_params.env
-        env_params=task_params.env_params
-        env = env_from_string(env, **env_params)
-        params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
-        print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
-        rollout_man = RolloutManager(env, params.rollout_params)
-        z_r = controller.estimate_z_r(obs, actions, next_obs, env, bs=bs)
-        controller.set_zr(z_r)
-        print(f"Calculated zr: {z_r}")
-        rollout_buffer = RolloutBuffer()
-        #TODO: set params.num_rollouts to eval.num_eval_episodes
-        rollout_buffer = gen_rollouts(
-            params,
-            rollout_man,
-            controller,
-            None, #initial_controller
-            rollout_buffer,
-            None, #forward_model
-            t, #iteration
-            False, #do_initial_rollouts
-        )
-        success_rates= calculate_success_rates(env, rollout_buffer)
-        print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, np.asarray(success_rates).mean()))#
-
-        results[task] = torch_helpers.to_numpy(success_rates)
-        z_rs[task] = torch_helpers.to_numpy(z_r)
-        #TODO: also record rewards
-        #TODO: save success rates, zr, 
-    return results, z_rs
-
+from mbrl.offline_helpers.checkpoints import save_fb_checkpoint
+from mbrl.offline_helpers.eval import eval, print_best_success_by_task, update_best_success_by_task
 
 
 #TODO: option to continue training from a checkpoint
@@ -97,44 +25,51 @@ def main(params):
     # update params file with seed (either given or generated above)
     params_copy = params._mutable_copy()
     params_copy["seed"] = Seeding.SEED
-    save_settings_to_json(params_copy, params.working_dir)
     
     #using params copy to use existing code defined on params with different tasks etc
     
     with open(os.path.join(params.training_data_dir, 'rollouts'), 'rb') as f:
         buffer = pickle.load(f)
     obs_dim=buffer[0]["observations"].shape[-1]
-    act_dim=buffer[0]["actions"].shape[-1]
-    fb_controller = ForwardBackwardController(params.controller_params, obs_dim, act_dim)
+    action_dim=buffer[0]["actions"].shape[-1]
+    
+    params_copy.controller_params.model.obs_dim = obs_dim
+    params_copy.controller_params.model.action_dim = action_dim
+    fb_controller = ForwardBackwardController(params_copy.controller_params)
+    #fb_controller = ForwardBackwardController(params.controller_params, obs_dim, act_dim)
+    save_settings_to_json(params_copy, params.working_dir)
+
     # print("_______________Debugging_______________")
     # print(type(buffer))
     # print(buffer[0]["observations"].shape)
     # print("_______________Debugging_End_______________")
-    total_metrics = None
-    for iteration in tqdm(range(params.num_train_steps)):
-        
+
+    debug=True
+    best_success_by_task = defaultdict(dict)
+    #for iteration in tqdm(range(params.num_train_steps)):
+    for iteration in tqdm(range(10)):
+
         metrics = fb_controller.update(buffer, iteration)
 
-        if total_metrics is None:
-            total_metrics = {k: metrics[k].clone() for k in metrics.keys()}
-        else:
-            total_metrics = {k: total_metrics[k] + metrics[k] for k in metrics.keys()}
-
-        #TODO: save metrics to tensorboard
-        if iteration % params.log_every_updates == 0:
+        if debug or (iteration % params.log_every_updates == 0):
             for k, v, in metrics.items():
                 logger.log(torch_helpers.to_numpy(v), key=k)
 
-        if True or iteration % params.eval.eval_every_steps == 0 and iteration > 0:
-            success_rates, z_rs = eval(fb_controller, buffer, params_copy, iteration)
-            #TODO: save results, z_rs
-            #TODO: save model
-            cp_directory = os.path.join(params.working_dir, f"checkpoint_{iteration}")
-            os.makedirs(cp_directory, exist_ok=True)
-            #fb_controller.save(cp_directory)
-            # saves dicts: task: success_rates/ z_rs
-            np.save(os.path.join(cp_directory, "success_rates"), success_rates)
-            np.save(os.path.join(cp_directory, "z_rs"), z_rs)
+        ### Debug
+        if debug:
+            params_copy["number_of_rollouts"] = 2
+        ### Debug End
+        if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0):
+            success_rates_dict, z_r_dict, bs = eval(fb_controller, buffer, params_copy, iteration)
+            # TODO: move this into eval
+            updated=update_best_success_by_task(best_success_by_task, success_rates_dict, iteration, debug)
+            if updated:
+                #TODO: for some reason this doesn't overwrite the file
+                print_best_success_by_task(best_success_by_task, to_yaml=True, working_dir=params.working_dir)
+
+            save_fb_checkpoint(params.working_dir, iteration, success_rates_dict=success_rates_dict, 
+                               controller=fb_controller, z_r_dict=z_r_dict, bs=bs, loud=2 if debug else 0)
+            
         
         allogger.get_root().flush(children=True)
 
@@ -143,7 +78,9 @@ def main(params):
     ###
 
     #TODO save final model
-    #TODO generate summary best results
+    #TODO generate summary (plot) of best results
+    #TODO maybe do sth with "total_metrics"
+    print_best_success_by_task(best_success_by_task, console=True)
     allogger.close()
 
     return 0

@@ -10,17 +10,17 @@ from mbrl.models.fb_nn import build_actor, build_backward, build_forward, eval_m
 
 
 class FBModel(nn.Module):
-    def __init__(self, params, obs_dim, action_dim, **kwargs):
+    def __init__(self, params, **kwargs):
         super().__init__()
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        self.obs_dim = params.obs_dim
+        self.action_dim = params.action_dim
         self.params = params
         arch = params.archi
         # create networks
-        self._backward_map = build_backward(obs_dim, arch.z_dim, arch.b)
-        self._forward_map = build_forward(obs_dim, arch.z_dim, action_dim, arch.f)
-        self._actor = build_actor(obs_dim, arch.z_dim, action_dim, arch.actor)
-        self._obs_normalizer = nn.BatchNorm1d(obs_dim, affine=False, momentum=0.01) if self.params.norm_obs else nn.Identity()
+        self._backward_map = build_backward(self.obs_dim, arch.z_dim, arch.b)
+        self._forward_map = build_forward(self.obs_dim, arch.z_dim, self.action_dim, arch.f)
+        self._actor = build_actor(self.obs_dim, arch.z_dim, self.action_dim, arch.actor)
+        self._obs_normalizer = nn.BatchNorm1d(self.obs_dim, affine=False, momentum=0.01) if self.params.norm_obs else nn.Identity()
         # make sure the model is in eval mode and never computes gradients
         self.train(False)
         self.requires_grad_(False)
@@ -67,3 +67,7 @@ class FBModel(nn.Module):
         if mean:
             return dist.mean
         return dist.sample()
+
+    def save(self, path):
+        #self.state_dict()
+        pass

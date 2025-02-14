@@ -1,5 +1,6 @@
 #adapts https://github.com/facebookresearch/metamotivo
 import math
+import os
 from typing import Dict, Tuple
 import numpy as np
 import torch
@@ -14,15 +15,17 @@ from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl import allogger, torch_helpers
 
 
+# no longer inherits from "Controller" or "TrainableController" since inherent cost_fn, train() method 
+# and env don't make sense
 class ForwardBackwardController():
-    def __init__(self, params, obs_dim, action_dim, **kwargs):
+    def __init__(self, params, **kwargs):
         super().__init__(**kwargs)
         self.logger = allogger.get_logger(scope=self.__class__.__name__, default_outputs=["tensorboard"])
         self.z_dim = params.model.archi.z_dim
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        self.obs_dim = params.model.obs_dim
+        self.action_dim = params.model.action_dim
         self.z_r = None
-        self._model = FBModel(params.model, obs_dim, action_dim)
+        self._model = FBModel(params.model)
         self.params = params #controller_params
         self.setup_training()
         self.setup_compile()
@@ -279,15 +282,12 @@ class ForwardBackwardController():
 
     def set_zr(self, z_r):
         self.z_r = z_r
-    
-    # fits F, B to data from rollout_buffer
-    # metrics dict for tensorboard
-    def train(self, rollout_buffer, metrics):
-        pass
+
     
     # for calculating zr s for different tasks with same offline data
     @torch.no_grad()
     def calculate_Bs(self, next_obs: torch.Tensor)->torch.Tensor:
+        #TODO: maybe limit batch size
         #observation_list=torch.tensor(observation_list, device=torch_helpers.device)
         bs=self._model._backward_map(next_obs)
         return bs
@@ -304,13 +304,21 @@ class ForwardBackwardController():
 
 
     def project_z(self, z):
-        return math.sqrt(z.shape[-1]) * F.normalize(z, dim=-1)
+        if self.params.model.archi.norm_z:
+            z = math.sqrt(z.shape[-1]) * F.normalize(z, dim=-1)
+        return z
 
 
     # save forward, backward separately
     # save z_r if it exists
-    # save action_discretization
     def save(self, path):
+        controller_dir = os.path.join(path, "fb_controller")
+        os.makedirs(controller_dir, exist_ok=True)
+        
+        pass
+
+    @classmethod
+    def load(self, path, params):
         pass
 
     @torch.no_grad()
