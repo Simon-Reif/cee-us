@@ -42,19 +42,19 @@ class ForwardBackwardController():
         self.backward_optimizer = torch.optim.Adam(
             self._model._backward_map.parameters(),
             lr=self.params.train.lr_b,
-            capturable=self.params.cudagraphs and not self.params.compile,
+            #capturable=self.params.cudagraphs and not self.params.compile,
             weight_decay=self.params.train.weight_decay,
         )
         self.forward_optimizer = torch.optim.Adam(
             self._model._forward_map.parameters(),
             lr=self.params.train.lr_f,
-            capturable=self.params.cudagraphs and not self.params.compile,
+            #capturable=self.params.cudagraphs and not self.params.compile,
             weight_decay=self.params.train.weight_decay,
         )
         self.actor_optimizer = torch.optim.Adam(
             self._model._actor.parameters(),
             lr=self.params.train.lr_actor,
-            capturable=self.params.cudagraphs and not self.params.compile,
+            #capturable=self.params.cudagraphs and not self.params.compile,
             weight_decay=self.params.train.weight_decay,
         )
 
