@@ -11,7 +11,7 @@ def _get_cp_dir(working_dir, iter):
 # success_reats: numpy array
 # controller own save method
 # z_rs, bs numpy arrays
-def save_fb_checkpoint(working_dir, iter, success_rates_dict=None, controller=None, z_r_dict=None, bs=None, 
+def save_fb_checkpoint(working_dir, iter, success_rates_dict=None, controller:ForwardBackwardController=None, z_r_dict=None, bs=None, 
                        rollout_buffer_dict=None, loud=0):
     cp_dir = _get_cp_dir(working_dir, iter)
     os.makedirs(cp_dir, exist_ok=True)
@@ -49,8 +49,8 @@ def get_bs(working_dir, iter):
 
 # we assume parameters are saved in working_dir/
 def get_fb_controller(working_dir, iter):
-    params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
-    return ForwardBackwardController.load(params.controller, _get_cp_dir(working_dir, iter))
+    params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
+    return ForwardBackwardController.load(_get_cp_dir(working_dir, iter), params.controller_params)
 
 def mean_success_rates_to_csv(working_dir, iter):
     pass

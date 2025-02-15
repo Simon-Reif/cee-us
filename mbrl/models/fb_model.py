@@ -67,7 +67,4 @@ class FBModel(nn.Module):
         if mean:
             return dist.mean
         return dist.sample()
-
-    def save(self, path):
-        #self.state_dict()
-        pass
+    

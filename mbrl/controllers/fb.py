@@ -1,6 +1,8 @@
 #adapts https://github.com/facebookresearch/metamotivo
+import copy
 import math
 import os
+from pathlib import Path
 from typing import Dict, Tuple
 import numpy as np
 import torch
@@ -20,7 +22,6 @@ from mbrl import allogger, torch_helpers
 class ForwardBackwardController():
     def __init__(self, params, **kwargs):
         super().__init__(**kwargs)
-        self.logger = allogger.get_logger(scope=self.__class__.__name__, default_outputs=["tensorboard"])
         self.z_dim = params.model.archi.z_dim
         self.obs_dim = params.model.obs_dim
         self.action_dim = params.model.action_dim
@@ -312,14 +313,30 @@ class ForwardBackwardController():
     # save forward, backward separately
     # save z_r if it exists
     def save(self, path):
-        controller_dir = os.path.join(path, "fb_controller")
+        controller_dir = Path(path, "fb_controller")
         os.makedirs(controller_dir, exist_ok=True)
-        
-        pass
+        model_state_dict = copy.deepcopy(self._model.state_dict())
+        torch.save(model_state_dict, controller_dir/"model_state_dict.pth")
+        torch.save(
+            {
+                "actor_optimizer": self.actor_optimizer.state_dict(),
+                "backward_optimizer": self.backward_optimizer.state_dict(),
+                "forward_optimizer": self.forward_optimizer.state_dict(),
+            },
+            controller_dir / "optimizers.pth",
+        )
 
     @classmethod
-    def load(self, path, params):
-        pass
+    def load(cls, path, params):
+        controller_dir = Path(path, "fb_controller")
+        agent = cls(params)
+        optimizers = torch.load(str(controller_dir / "optimizers.pth"), weights_only=True)
+        agent.actor_optimizer.load_state_dict(optimizers["actor_optimizer"])
+        agent.backward_optimizer.load_state_dict(optimizers["backward_optimizer"])
+        agent.forward_optimizer.load_state_dict(optimizers["forward_optimizer"])
+        model_state_dict = torch.load(controller_dir/"model_state_dict.pth", weights_only=True)
+        agent._model.load_state_dict(model_state_dict)
+        return agent
 
     @torch.no_grad()
     def get_action(self, obs, state=None, mode="train"):
