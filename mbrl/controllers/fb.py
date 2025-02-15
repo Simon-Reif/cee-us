@@ -120,14 +120,14 @@ class ForwardBackwardController():
         with torch.no_grad(), eval_mode(self._model._obs_normalizer):
             obs, next_obs = self._model._obs_normalizer(obs), self._model._obs_normalizer(next_obs)
 
-        torch.compiler.cudagraph_mark_step_begin()
+        #torch.compiler.cudagraph_mark_step_begin()
         z = self.sample_mixed_z(train_goal=next_obs).clone()
         #self.z_buffer.add(z)
 
         q_loss_coef = self.params.train.q_loss_coef if self.params.train.q_loss_coef > 0 else None
         clip_grad_norm = self.params.train.clip_grad_norm if self.params.train.clip_grad_norm > 0 else None
 
-        torch.compiler.cudagraph_mark_step_begin()
+        #torch.compiler.cudagraph_mark_step_begin()
         metrics = self.update_fb(
             obs=obs,
             action=action,
