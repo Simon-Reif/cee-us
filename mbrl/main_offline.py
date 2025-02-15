@@ -44,10 +44,10 @@ def main(params):
     # print(buffer[0]["observations"].shape)
     # print("_______________Debugging_End_______________")
 
-    debug=True
+    debug=False
     best_success_by_task = defaultdict(dict)
-    #for iteration in tqdm(range(params.num_train_steps)):
-    for iteration in tqdm(range(10)):
+    for iteration in tqdm(range(params.num_train_steps)):
+    #for iteration in tqdm(range(10)):
 
         metrics = fb_controller.update(buffer, iteration)
 
