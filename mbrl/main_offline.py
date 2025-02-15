@@ -44,20 +44,20 @@ def main(params):
     # print(buffer[0]["observations"].shape)
     # print("_______________Debugging_End_______________")
 
-    debug=False
+    debug=True
     best_success_by_task = defaultdict(dict)
     for iteration in tqdm(range(params.num_train_steps)):
     #for iteration in tqdm(range(10)):
 
         metrics = fb_controller.update(buffer, iteration)
 
-        if debug or (iteration % params.log_every_updates == 0):
+        if iteration % params.log_every_updates == 0:
             for k, v, in metrics.items():
                 logger.log(torch_helpers.to_numpy(v), key=k)
 
         ### Debug
-        if debug:
-            params_copy["number_of_rollouts"] = 2
+        # if debug:
+        #     params_copy["number_of_rollouts"] = 2
         ### Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0):
             success_rates_dict, z_r_dict, bs = eval(fb_controller, buffer, params_copy, iteration)

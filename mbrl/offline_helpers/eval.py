@@ -79,6 +79,7 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
 
         results[task] = success_rates
         z_rs[task] = torch_helpers.to_numpy(z_r)
+    bs = torch_helpers.to_numpy(bs)
     return results, z_rs, bs
 
 
