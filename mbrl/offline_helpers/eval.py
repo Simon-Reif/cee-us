@@ -1,7 +1,7 @@
 import yaml
 import numpy as np
 from copy import deepcopy
-from mbrl import torch_helpers
+from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments import env_from_string
 from mbrl.helpers import gen_rollouts
@@ -32,11 +32,8 @@ def calculate_success_rates(env, buffer: RolloutBuffer):
     #print("Success rate over {} rollouts in task {}, is {}".format(len(buffer), env.case, np.asarray(success_rate).mean()))#
     return np.array(success_rate)
 
-#self.logger = allogger.get_logger(scope=self.__class__.__name__, default_outputs=["tensorboard"])
-#self.logger.log(torch.min(self.costs_).item(), key="best_trajectory_cost")
-
 def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, params, t=None, debug=False):
-    #eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
+    eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
     """"
     num_eval_episodes: 10
     num_inference_samples: 50_000
@@ -47,7 +44,8 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
         print(f"Evaluation at iteration {t}")
     obs, actions, next_obs = torch_helpers.to_tensor_device(*offline_data.get_random_transitions(params.eval.num_inference_samples))
     bs=controller.calculate_Bs(next_obs)
-    results={}
+    success_rates_eps_dict={}
+    success_rates_dict={}
     z_rs={}
     for task in params.eval.eval_tasks:
         #TODO: load entire task settings, and task horizon from rollout params
@@ -74,19 +72,21 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
             t, #iteration
             False, #do_initial_rollouts
         )
-        success_rates= calculate_success_rates(env, rollout_buffer)
-        print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, success_rates.mean()))#
+        success_rates_eps = calculate_success_rates(env, rollout_buffer)
+        mean_success_rate = success_rates_eps.mean()
+        eval_logger.log(mean_success_rate, key=f"{task}_success_rate")
+        print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
 
-        results[task] = success_rates
+        success_rates_eps_dict[task] = success_rates_eps
+        success_rates_dict[task] = mean_success_rate
         z_rs[task] = torch_helpers.to_numpy(z_r)
     bs = torch_helpers.to_numpy(bs)
-    return results, z_rs, bs
+    return success_rates_eps_dict, success_rates_dict, z_rs, bs
 
 
-def update_best_success_by_task(best_success_by_task, success_rates_dict, iteration, debug=False):
-    for task, success_rates in success_rates_dict.items():
-        success_rate = success_rates.mean()
-        updated = False
+def update_best_success_by_task(best_success_by_task, success_rates, iteration, debug=False):
+    updated = False
+    for task, success_rate in success_rates.items():
         if task not in best_success_by_task or success_rate > best_success_by_task[task]["success_rate"]:
             best_success_by_task[task]["iter"] = iteration
             best_success_by_task[task]["success_rate"] = success_rate

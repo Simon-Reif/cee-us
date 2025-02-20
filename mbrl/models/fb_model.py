@@ -10,7 +10,7 @@ from mbrl.models.fb_nn import build_actor, build_backward, build_forward, eval_m
 
 
 class FBModel(nn.Module):
-    def __init__(self, params, **kwargs):
+    def __init__(self, params, device=None, **kwargs):
         super().__init__()
         self.obs_dim = params.obs_dim
         self.action_dim = params.action_dim
@@ -24,7 +24,10 @@ class FBModel(nn.Module):
         # make sure the model is in eval mode and never computes gradients
         self.train(False)
         self.requires_grad_(False)
-        self.to(torch_helpers.device)
+        if device is not None:
+            self.to(device)
+        else:
+            self.to(torch_helpers.device)
 
     def _prepare_for_train(self) -> None:
         # create TARGET networks

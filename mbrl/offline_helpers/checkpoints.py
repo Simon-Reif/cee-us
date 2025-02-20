@@ -39,13 +39,17 @@ def get_success_rates_dict(working_dir, iter):
     success_rates = np.load(os.path.join(_get_cp_dir(working_dir, iter), "success_rate_dict.npy"))
     return success_rates.item()
 
-def get_zr_dict(working_dir, iter):
-    zrs = np.load(os.path.join(_get_cp_dir(working_dir, iter), "z_r_dict.npy"))
+def get_zr_dict(working_dir, iter=None):
+    if iter is not None:
+        path = _get_cp_dir(working_dir, iter)
+    else:
+        path = working_dir
+    zrs = np.load(os.path.join(path, "z_r_dict.npy"), allow_pickle=True)
     return zrs.item()
 
 # B(s_next) for B at iter and the offline training buffer
 def get_bs(working_dir, iter):
-    return np.load(os.path.join(_get_cp_dir(working_dir, iter), "bs.npy"))
+    return np.load(os.path.join(_get_cp_dir(working_dir, iter), "bs.npy"), allow_pickle=True)
 
 # we assume parameters are saved in working_dir/
 def get_fb_controller(working_dir, iter):
@@ -54,6 +58,17 @@ def get_fb_controller(working_dir, iter):
 
 def mean_success_rates_to_csv(working_dir, iter):
     pass
+
+
+def get_latest_checkpoint(working_dir):
+    meta = smart_settings.load(os.path.join(working_dir, "meta.json"))
+    agent = get_fb_controller(working_dir, meta["latest_checkpoint"])
+    return agent, meta["latest_checkpoint"]
+
+def save_meta(working_dir, iter):
+    meta={}
+    meta["latest_checkpoint"] = iter
+    smart_settings.save(meta, os.path.join(working_dir, "meta.json"))
 
 # TODO: loading parts of FB controller only: here or in controller class?
 # TODO: get latest checkpoint?

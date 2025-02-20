@@ -1,5 +1,6 @@
 slurm-outputs
 sandbox
+wandb
 figures/
 *.prof
 # Byte-compiled / optimized / DLL files

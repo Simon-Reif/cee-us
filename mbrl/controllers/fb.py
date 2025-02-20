@@ -330,11 +330,13 @@ class ForwardBackwardController():
     def load(cls, path, params):
         controller_dir = Path(path, "fb_controller")
         agent = cls(params)
-        optimizers = torch.load(str(controller_dir / "optimizers.pth"), weights_only=True)
+        optimizers = torch.load(str(controller_dir / "optimizers.pth"), 
+                                map_location=torch_helpers.device, weights_only=True)
         agent.actor_optimizer.load_state_dict(optimizers["actor_optimizer"])
         agent.backward_optimizer.load_state_dict(optimizers["backward_optimizer"])
         agent.forward_optimizer.load_state_dict(optimizers["forward_optimizer"])
-        model_state_dict = torch.load(controller_dir/"model_state_dict.pth", weights_only=True)
+        model_state_dict = torch.load(controller_dir/"model_state_dict.pth",
+                                      map_location=torch_helpers.device, weights_only=True)
         agent._model.load_state_dict(model_state_dict)
         return agent
 
