@@ -1,8 +1,8 @@
 __import__:
-    - "experiments/cee_us/settings/common/fb/test_config.yaml"
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/02_21/zdim256"
+working_dir: "results/cee_us/construction/2blocks/02_22/zdim1024"
 controller_params:
   model:
     archi:
-      z_dim: 256
+      z_dim: 1024

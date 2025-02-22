@@ -3,6 +3,7 @@ import os
 import pickle
 import numpy as np
 import torch
+import wandb
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -32,7 +33,7 @@ def main(params):
     params_copy.controller_params.model.obs_dim = obs_dim
     params_copy.controller_params.model.action_dim = action_dim
 
-    debug=False
+    debug=True
     start_iter=0
     if "continue_training" in params_copy and params_copy.continue_training:
         fb_controller, idx = get_latest_checkpoint(params_copy.working_dir)
@@ -61,6 +62,7 @@ def main(params):
         if debug or (iteration % params.log_every_updates == 0):
             for k, v, in metrics.items():
                 logger.log(torch_helpers.to_numpy(v), key=k)
+            wandb.log(metrics, step=iteration)
             allogger.get_root().flush(children=True)
 
 
@@ -99,6 +101,9 @@ if __name__ == "__main__":
     params = read_params_from_cmdline(verbose=True, save_params=False)
 
     os.makedirs(params.working_dir, exist_ok=True)
+
+    wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
+    wandb.init(project="test", name="logtest_2", entity="srtea", config=params)
 
     allogger.basic_configure(
         logdir=params.working_dir,

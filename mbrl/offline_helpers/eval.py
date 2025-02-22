@@ -1,4 +1,5 @@
 import yaml
+import wandb
 import numpy as np
 from copy import deepcopy
 from mbrl import allogger, torch_helpers
@@ -75,6 +76,7 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
         success_rates_eps = calculate_success_rates(env, rollout_buffer)
         mean_success_rate = success_rates_eps.mean()
         eval_logger.log(mean_success_rate, key=f"{task}_success_rate")
+        wandb.log({f"eval/{task}_success_rate": mean_success_rate}, step=t)
         print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
 
         success_rates_eps_dict[task] = success_rates_eps
