@@ -3,9 +3,9 @@ __import__:
     - "experiments/cee_us/settings/common/basic.yaml"
 
 training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
-working_dir: "results/cee_us/construction/2blocks/test"
+working_dir: "results/cee_us/construction/2blocks/test_main_offline"
 # load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
-#continue_training: true
+continue_training: true
 num_train_steps: 3_000_000
 log_every_updates: 10_000
 #used in lieu of num_eval_episodes to use gen_rollouts function
