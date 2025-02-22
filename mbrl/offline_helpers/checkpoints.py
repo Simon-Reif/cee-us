@@ -1,3 +1,4 @@
+import json
 import os
 import numpy as np
 import smart_settings
@@ -68,7 +69,9 @@ def get_latest_checkpoint(working_dir):
 def save_meta(working_dir, iter):
     meta={}
     meta["latest_checkpoint"] = iter
-    smart_settings.save(meta, os.path.join(working_dir, "meta.json"))
+    filename = os.path.join(working_dir, "meta.json")
+    with open(filename, "w") as file:
+        file.write(json.dumps(meta, sort_keys=True, indent=4))
 
 # TODO: loading parts of FB controller only: here or in controller class?
 # TODO: get latest checkpoint?
