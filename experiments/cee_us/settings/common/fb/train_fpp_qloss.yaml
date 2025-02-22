@@ -1,8 +1,10 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/02_22/zdim50"
+working_dir: "results/cee_us/construction/2blocks/02_22/qloss_z100"
 controller_params:
   model:
     archi:
-      z_dim: 50
+      z_dim: 100
+  train:
+    q_loss_coef: 0.1
