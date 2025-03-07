@@ -1,5 +1,6 @@
 import yaml
 import wandb
+import time
 import numpy as np
 from copy import deepcopy
 from mbrl import allogger, torch_helpers
@@ -44,23 +45,29 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
     if t is not None:
         print(f"Evaluation at iteration {t}")
     obs, actions, next_obs = torch_helpers.to_tensor_device(*offline_data.get_random_transitions(params.eval.num_inference_samples))
+    # TODO: set goals in observations according to task; maybe put calculate_Bs into task loop
     bs=controller.calculate_Bs(next_obs)
     success_rates_eps_dict={}
     success_rates_dict={}
     z_rs={}
     for task in params.eval.eval_tasks:
-        #TODO: load entire task settings, and task horizon from rollout params
         task_params=params.eval_envs[task]
+        ### Task Adaptation
         env=task_params.env
         env_params=task_params.env_params
         env = env_from_string(env, **env_params)
         params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
         print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
+        params.rollout_params.obs_wo_goals = True
         rollout_man = RolloutManager(env, params.rollout_params)
-        z_r = controller.estimate_z_r(obs, actions, next_obs, env, bs=bs)
+        #TODO: set goals for obs from buffer
+        goals = [env._sample_goal().copy() for _ in range(params.eval.num_inference_goals)]
+        goals = np.array(goals).repeat(len(next_obs)/len(goals), axis=0)
+        z_r = controller.estimate_z_r(next_obs, goals, env, bs=bs)
         controller.set_zr(z_r)
         if debug:
             print(f"Calculated zr: {z_r}")
+        ### Task Adaptation End
         rollout_buffer = RolloutBuffer()
         #TODO: set params.num_rollouts to eval.num_eval_episodes
         rollout_buffer = gen_rollouts(
@@ -117,3 +124,81 @@ def print_best_success_by_task(best_success_by_task, console=False, to_yaml=Fals
         for task, success in best_success_by_task.items():
             print(f"Best success rate for task {task} is {success['success_rate']} at iteration {success['iter']}")
     
+
+def _find_match(obs, waypoint, threshold):
+    found =False
+    i=0
+    smallest_dist=None
+    while not found and i<len(obs):
+        dist=np.linalg.norm(obs[i]-waypoint)
+        if dist<threshold:
+            found=True
+            idx=i
+        if smallest_dist is None:
+            smallest_dist=dist
+        elif smallest_dist>dist:
+            smallest_dist=dist
+            idx=i
+        i+=1
+    if found:
+        return idx, dist, found
+    else:
+        return idx, smallest_dist, found
+    
+
+# return indices of matched waypoints, distances, under_threshold, and if all waypoints were matched
+def _discr_match(obs, ctrl_waypoints, threshold):
+    idx, dist, under_thresh  = _find_match(obs, ctrl_waypoints[0], threshold)
+    obs_rest=obs[idx:]
+    ctrl_waypoints_rest=ctrl_waypoints[1:]
+    n_obs = len(obs_rest)
+    n_wp = len(ctrl_waypoints_rest)
+    if n_obs<n_wp:
+        return [idx], [dist], [under_thresh], False
+    if n_wp==0:
+        return [idx], [dist], [under_thresh], True
+    idcs, dists, under_thresholds, all_matched = _discr_match(obs_rest, ctrl_waypoints_rest, threshold)
+    idcs = [i+idx for i in idcs]
+    idcs.insert(0, idx)
+    dists.insert(0, dist)
+    under_thresholds.insert(0, under_thresh)
+    return idcs, dists, under_thresholds, all_matched
+
+
+
+def on_distr_motion_tracking(controller: ForwardBackwardController, buffer:RolloutBuffer, env, params, t=None, debug=False):
+    num_eval_traj = 100
+    num_states_to_match=10
+    #TODO: set threshold to what makes sense from observation space
+    threshold=0.5
+    traj_ids = np.random.choice(len(buffer), num_eval_traj)
+    state_ids = np.linspace(0, len(buffer[0])-1, num_states_to_match, dtype=int)
+    params.num_rollouts = 1
+    for traj_id in traj_ids:
+        traj = buffer[traj_id]
+        obs = traj["next_observations"]
+        z_r = controller.zr_from_states(obs[state_ids])
+        controller.set_zr(z_r)
+        ctrl_rollouts = RolloutBuffer()
+        rollout_man = RolloutManager(env, params.rollout_params, start_state=obs[0])
+        ctrl_rollouts = gen_rollouts(
+            params,
+            rollout_man,
+            controller,
+            None, #initial_controller
+            ctrl_rollouts,
+            None, #forward_model
+            t, #iteration
+            False, #do_initial_rollouts
+        )
+        ctrl_waypoints=ctrl_rollouts[0]["next_observations"][state_ids]
+        idcs, dists, under_thresh, all_matched = _discr_match(obs, ctrl_waypoints)
+
+
+if __name__ == "__main__":
+    a = np.array([10, 4, 9, 3, 11, 1, 1, 7, 3], dtype=np.float32)
+    b = np.array([10.9, 1, 1.1, 7.2], dtype=np.float32)
+    print(a.dtype, b.dtype)
+    start_t = time.time()
+    print(_discr_match(a, b, 0.5))
+    print(f"Elapsed time: {time.time()-start_t}")

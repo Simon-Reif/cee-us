@@ -18,9 +18,13 @@ class Rollout(object):
         "env_states",
         "model_states",
         "successes",
+        "is_success",
     }
 
+    # tried to add __setitem__ here for convenience
     def_delegators("_data", "__len__, __iter__, __getitem__, __repr__")
+    #def_delegators("_data", "__len__, __iter__, __getitem__, __repr__, __setitem__")
+
 
     def __init__(self, field_names, transitions: Iterable, strict_field_names=True):
         # Generators might cause problem in inspection of first element

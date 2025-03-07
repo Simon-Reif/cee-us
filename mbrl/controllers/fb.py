@@ -43,18 +43,21 @@ class ForwardBackwardController():
             self._model._backward_map.parameters(),
             lr=self.params.train.lr_b,
             #capturable=self.params.cudagraphs and not self.params.compile,
+            eps=self.params.train.eps,
             weight_decay=self.params.train.weight_decay,
         )
         self.forward_optimizer = torch.optim.Adam(
             self._model._forward_map.parameters(),
             lr=self.params.train.lr_f,
             #capturable=self.params.cudagraphs and not self.params.compile,
+            eps=self.params.train.eps,
             weight_decay=self.params.train.weight_decay,
         )
         self.actor_optimizer = torch.optim.Adam(
             self._model._actor.parameters(),
             lr=self.params.train.lr_actor,
             #capturable=self.params.cudagraphs and not self.params.compile,
+            eps=self.params.train.eps,
             weight_decay=self.params.train.weight_decay,
         )
 
@@ -294,10 +297,12 @@ class ForwardBackwardController():
         return bs
 
     @torch.no_grad()
-    def estimate_z_r(self, obs, actions, next_obs, env: Env, bs=None, wr=True):
+    def estimate_z_r(self, next_obs, goals, env: Env, bs=None, wr=True):
         if bs is None:
             bs = self.calculate_Bs(next_obs)
-        rewards = -env.cost_fn(obs, actions, next_obs).to(torch_helpers.device)
+        rewards = env.compute_rewards_goal(torch_helpers.to_numpy(next_obs), goals)
+        rewards = torch_helpers.to_tensor(rewards).to(torch_helpers.device)
+        #rewards = -env.cost_fn(obs, actions, next_obs).to(torch_helpers.device)
         if wr:
             rewards = rewards*F.softmax(10 * rewards, dim=0)
         z_r=torch.matmul(rewards.T, bs)
@@ -341,7 +346,7 @@ class ForwardBackwardController():
         return agent
 
     @torch.no_grad()
-    def get_action(self, obs, state=None, mode="train"):
+    def get_action(self, obs, state=None, mode="test"):
         if self.z_r is None:
             raise AttributeError("z_r not set")
         obs = torch_helpers.to_tensor(obs).to(torch_helpers.device)

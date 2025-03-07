@@ -62,6 +62,9 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             from mbrl.environments.fpp_construction.xml_gen_slide import (
                 generate_xml_slide as generate_xml,
             )
+        elif case == "Reach":
+            distance_threshold = 0.1
+            from mbrl.environments.fpp_construction.xml_gen import generate_xml
         else:
             distance_threshold = 0.05
             from mbrl.environments.fpp_construction.xml_gen import generate_xml
@@ -332,7 +335,7 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         return True
 
     def _sample_goal(self):
-        cases = ["Singletower", "Pyramid", "Multitower", "Slide", "PickAndPlace", "Flip"]
+        cases = ["Singletower", "Pyramid", "Multitower", "Slide", "PickAndPlace", "Flip", "Reach"]
         if self.case == "All":
             case_id = np.random.randint(0, len(cases))
             case = cases[case_id]
@@ -581,6 +584,12 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         elif case == "Flip":
             for _ in range(self.num_blocks):
                 goals.append(np.array([np.pi / 2, 0.0, 0.0]))
+        elif case == "Reach":
+            if hasattr(self, "fixed_goal") and self.fixed_goal is not None:
+                goal = self.initial_gripper_xpos[:3] + np.asarray(self.fixed_goal)
+            else:
+                goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
+            goals.append(goal.copy())
         else:
             raise NotImplementedError
 

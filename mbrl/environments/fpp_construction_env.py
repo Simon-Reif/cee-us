@@ -22,6 +22,8 @@ class FetchPickAndPlaceConstruction(
     def __init__(self, *, name, sparse, shaped_reward, **kwargs):
         self.shaped_reward = shaped_reward
         self.sparse = sparse
+        if "fixed_goal" in kwargs:
+            self.fixed_goal = kwargs.fixed_goal
 
         FetchBlockConstructionEnv.__init__(self, **kwargs)
         GymRoboticsGroundTruthSupportEnv.__init__(self, name=name, **kwargs)
@@ -33,6 +35,7 @@ class FetchPickAndPlaceConstruction(
         self.object_dyn_dim = 12
         self.object_stat_dim = 0
         self.nObj = self.num_blocks
+        self.goal_dim = 3
 
         assert isinstance(self.observation_space, spaces.Dict)
         orig_obs_len = self.observation_space.spaces["observation"].shape[0]
@@ -64,6 +67,8 @@ class FetchPickAndPlaceConstruction(
             self.threshold = 0.1
         elif self.case == "Flip":
             self.threshold = 0.087 * 2  # In radians! this is threshold for the euler angles
+        elif self.case == "Reach":
+            self.threshold = 0.1
         else:
             self.threshold = 0.05
 
@@ -610,3 +615,12 @@ class FetchPickAndPlaceConstruction(
             ),
         }
         return state_dict
+
+    # to interface "compute_reward" function to calculate z_rs
+    def compute_rewards_goal(self, observations, goals):
+        achieved_goal = self.achieved_goal_from_observation(observations)
+        rewards = []
+        for i in range(len(goals)):
+            obs = {"achieved_goal": achieved_goal[i], "desired_goal": goals[i]}
+            rewards.append(self.compute_reward(obs))
+        return np.array(rewards)

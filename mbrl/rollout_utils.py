@@ -11,6 +11,7 @@ from tqdm import tqdm
 from mbrl import allogger
 from mbrl.base_types import Controller
 from mbrl.controllers.abstract_controller import ParallelController
+from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments.abstract_environments import (
     GoalSpaceEnvironmentInterface,
     GroundTruthSupportEnv,
@@ -266,7 +267,12 @@ class RolloutManager:
                     start_time = time.time()
                 state = RolloutManager.supply_env_state(env, use_env_states)
                 try:
-                    ac = policy.get_action(ob, state=state, mode=mode)
+                    if isinstance(policy, ForwardBackwardController):
+                        obs_wo_goal = env.observation_wo_goal(ob)
+                        ac = policy.get_action(obs_wo_goal, state=state, mode=mode)
+                    else:
+                        ac = policy.get_action(ob, state=state, mode=mode)
+
                     if isinstance(env, RealRobotEnvInterface):
                         time_controller = time.time() - start_time
 

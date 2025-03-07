@@ -3,13 +3,17 @@ __import__:
     - "experiments/cee_us/settings/common/basic.yaml"
 
 training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
-working_dir: "results/cee_us/construction/2blocks/test_main_offline"
+working_dir: "results/cee_us/construction/2blocks/03_07/new_obs"
 # load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
 # continue_training: true
 num_train_steps: 3_000_000
 log_every_updates: 10_000
 #used in lieu of num_eval_episodes to use gen_rollouts function
 number_of_rollouts: 10
+
+debug: false
+logging:
+  project: "cee-us"
 
 #base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"
@@ -76,6 +80,7 @@ controller_params:
     stddev_clip: 0.3
     q_loss_coef: 0.0
     fb_target_tau: 0.01
+    eps: 1.0e-5
 
 
   
@@ -83,6 +88,7 @@ eval:
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr
   num_inference_samples: 50_000
+  num_inference_goals: 500
   eval_every_steps: 100_000
   # "Throw" translates into "Slide" in env_params.case
   eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]

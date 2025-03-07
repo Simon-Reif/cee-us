@@ -9,6 +9,8 @@ from collections import defaultdict
 
 from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
+from mbrl.environments import env_from_string
+from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals
 from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
@@ -25,15 +27,30 @@ def main(params):
     
     #using params copy to use existing code defined on params with different tasks etc
     
-    with open(os.path.join(params.training_data_dir, 'rollouts'), 'rb') as f:
-        buffer = pickle.load(f)
+    #TODO: for now assume we load buffer with goals in obs
+    #TODO: later save buffer without goals
+
+    wog_path=os.path.join(params.training_data_dir,'rollouts_wog')
+    if os.path.exists(wog_path):
+        print("Loading existing buffer without goals")
+        with open(os.path.join(params.training_data_dir, 'rollouts_wog'), 'rb') as f:
+            buffer = pickle.load(f)
+    else:
+        print("Extracting observations without goals and saving buffer")
+        with open(os.path.join(params.training_data_dir, 'rollouts'), 'rb') as f:
+            raw_buffer = pickle.load(f)
+        #TODO: pick out obs without goals, save
+        env = env_from_string(params.env, **params.env_params)
+        buffer = get_buffer_wo_goals(raw_buffer, env)
+        with open(wog_path, "wb") as f:
+                    pickle.dump(buffer, f)
+
     obs_dim=buffer[0]["observations"].shape[-1]
     action_dim=buffer[0]["actions"].shape[-1]
-    
     params_copy.controller_params.model.obs_dim = obs_dim
     params_copy.controller_params.model.action_dim = action_dim
 
-    debug=False
+    debug=params.debug
     start_iter=0
     if "continue_training" in params_copy and params_copy.continue_training:
         fb_controller, idx = get_latest_checkpoint(params_copy.working_dir)
@@ -103,7 +120,7 @@ if __name__ == "__main__":
     os.makedirs(params.working_dir, exist_ok=True)
 
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
-    wandb.init(project="cee-us", entity="srtea", config=params)
+    wandb.init(project=params.logging.project, entity="srtea", config=params)
 
     allogger.basic_configure(
         logdir=params.working_dir,
