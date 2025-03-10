@@ -1,0 +1,7 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/03_10/clip_grad"
+controller_params:
+  train:
+    clip_grad_norm: 1.0
