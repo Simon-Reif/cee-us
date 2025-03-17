@@ -1,0 +1,10 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/03_17/lr_6"
+controller_params:
+  train:
+    lr_f: 1.0e-6
+    lr_actor: 1.0e-6
+    lr_b: 1.0e-6
+  
