@@ -1,0 +1,152 @@
+__import__:
+    - "experiments/defaults.yaml"
+    - "experiments/cee_us/settings/common/basic.yaml"
+
+training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_stack/gnn_ensemble_icem/checkpoints_000"
+working_dir: "results/cee_us/construction/2blocks/alt_data/23_03"
+# load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
+# continue_training: true
+num_train_steps: 3_000_000
+log_every_updates: 10_000
+#used in lieu of num_eval_episodes to use gen_rollouts function
+number_of_rollouts: 10
+
+debug: false
+logging:
+  project: "cee-us"
+
+#base env, rollout_params; these settings aren't used
+env: "FetchPickAndPlaceConstruction"
+env_params:
+  sparse: False
+  shaped_reward: true
+  num_blocks: 2
+  stack_only: true
+  case: "Singletower"
+  visualize_target: true
+  visualize_mocap: false
+rollout_params:
+  render: false
+  render_initial: false
+  render_eval: false
+  record: false
+  only_final_reward: false
+  use_env_states: true
+  logging: true
+  task_horizon: 100
+
+controller: "fb"
+controller_params:
+  compile: false
+  cudagraphs: false
+  model:
+    inference_batch_size: 500_000
+    actor_std: 0.2
+    norm_obs: false
+    seq_length: 1
+    archi:
+      z_dim: 100
+      norm_z: true
+      b:
+        norm: true
+        hidden_dim: 256
+        hidden_layers: 2
+      f:
+        hidden_dim: 1024
+        hidden_layers: 1
+        model: "simple"  # {'simple', 'residual'}
+        embedding_layers: 2
+        num_parallel: 2
+        ensemble_mode: "batch"  # {'batch', 'seq', 'vmap'}
+      actor:
+        hidden_dim: 1024
+        hidden_layers: 1
+        model: "simple"  # {'simple', 'residual'}
+        embedding_layers: 2
+
+  train:
+    batch_size: 1024
+    lr_f: 0.0001
+    lr_actor: 0.0001
+    lr_b: 0.0001
+    ortho_coef: 1
+    train_goal_ratio: 0.5
+    actor_reg_coef: 0.01
+    fb_pessimism_penalty: 0
+    actor_pessimism_penalty: 0.5
+    discount: 0.98
+    weight_decay: 0.0
+    clip_grad_norm: 0.0
+    stddev_clip: 0.3
+    q_loss_coef: 0.0
+    fb_target_tau: 0.01
+    eps: 1.0e-5
+
+
+  
+eval:
+  #num_eval_episodes: 10 #->number_of_rollouts
+  # number of samples to estimate zr
+  num_inference_samples: 50_000
+  num_inference_goals: 500
+  eval_every_steps: 100_000
+  # "Throw" translates into "Slide" in env_params.case
+  eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]
+
+#configs from 
+#experiments/cee_us/settings/construction/zero_shot_generalization/common/controller_<task>.yaml
+#with num_blocks: 2 for all
+eval_envs:
+  PickAndPlace:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: false
+      case: "PickAndPlace"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 400
+  Singletower:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: False
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: true
+      case: "Singletower"
+      visualize_target: true
+      visualize_mocap: false
+
+    rollout_params:
+      task_horizon: 600
+  # "Slide" stands for "Throw"
+  Throw:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: true
+      case: "Slide"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 200
+  Flip:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: true
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: false
+      case: "Flip" 
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 500
+
+
+  
+device: "cuda:0"
