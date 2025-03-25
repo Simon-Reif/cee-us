@@ -3,17 +3,40 @@ __import__:
     - "experiments/cee_us/settings/common/basic.yaml"
 
 training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
-working_dir: "results/cee_us/construction/2blocks/test_clip_grad1"
-#load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
-continue_training: false
-num_train_steps: 3_000_000
-log_every_updates: 10_000
-#used in lieu of num_eval_episodes to use gen_rollouts function
-number_of_rollouts: 10
+working_dir: "results/cee_us/construction/2blocks/03_07/new_obs"
+# load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
+# continue_training: true
 
-debug: true
+
+# num_env_steps/update_agent_every * num_agent_updates = num_train_steps
+num_train_steps: 1_200_000
+log_every_updates: 10_000
+#update_agent_every * online_parallel_envs / task_horizon = num_rollouts_per_update 
+num_rollouts_per_update: 250
+# num_seed_steps / task_horizon = num_seed_rollouts -> / num_rollouts_per_update
+num_seed_iters: 2
+num_seed_rollouts: 500
+# #used in lieu of num_eval_episodes to use gen_rollouts function
+# number_of_rollouts: 10
+
+
+# # MM definitions of rollout params
+# online_parallel_envs: 50
+# num_env_steps: 30_000_000
+# update_agent_every: 500
+# num_agent_updates: 50
+# num_seed_steps: 50_000
+
+
+buffer_size: 5_000_000
+#we have this equal to eval.eval_every_steps
+#checkpoint_every_steps: 5000000
+buffer_device: cpu
+
+
+debug: false
 logging:
-  project: "test"
+  project: "cee-us"
 
 #base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"
@@ -35,51 +58,75 @@ rollout_params:
   logging: true
   task_horizon: 100
 
-controller: "fb"
+controller: "fb_cpr"
 controller_params:
   compile: false
   cudagraphs: false
   model:
     inference_batch_size: 500_000
     actor_std: 0.2
-    norm_obs: false
-    seq_length: 1
+    norm_obs: true
+    seq_length: 8
     archi:
-      z_dim: 100
+      z_dim: 256
       norm_z: true
       b:
         norm: true
         hidden_dim: 256
-        hidden_layers: 2
+        hidden_layers: 1
       f:
         hidden_dim: 1024
-        hidden_layers: 1
+        hidden_layers: 2
         model: "simple"  # {'simple', 'residual'}
         embedding_layers: 2
         num_parallel: 2
         ensemble_mode: "batch"  # {'batch', 'seq', 'vmap'}
       actor:
         hidden_dim: 1024
-        hidden_layers: 1
+        hidden_layers: 2
         model: "simple"  # {'simple', 'residual'}
         embedding_layers: 2
+      critic:
+        hidden_dim: 1024
+        model: simple
+        hidden_layers: 2
+        embedding_layers: 2
+        num_parallel: 2
+        ensemble_mode: batch
+      discriminator:
+        hidden_dim: 1024
+        hidden_layers: 3
 
+  
   train:
     batch_size: 1024
-    lr_f: 0.0001
-    lr_actor: 0.0001
-    lr_b: 0.0001
-    ortho_coef: 1
-    train_goal_ratio: 0.5
+    lr_f: 1.0e-04
+    lr_actor: 1.0e-05
+    lr_b: 1.0e-04
+    ortho_coef: 100
+    train_goal_ratio: 0.2
     actor_reg_coef: 0.01
     fb_pessimism_penalty: 0
     actor_pessimism_penalty: 0.5
     discount: 0.98
     weight_decay: 0.0
-    clip_grad_norm: 1.0
+    clip_grad_norm: 0.0
     stddev_clip: 0.3
-    q_loss_coef: 0.0
+    q_loss_coef: 0.1
     fb_target_tau: 0.01
+    use_mix_rollout: 1
+    update_z_every_step: 150
+    z_buffer_size: 10000
+    lr_discriminator: 1.0e-05
+    lr_critic: 0.0001
+    critic_target_tau: 0.005
+    critic_pessimism_penalty: 0.5
+    reg_coeff: 0.01
+    scale_reg: true
+    expert_asm_ratio: 0.6
+    relabel_ratio: 0.8
+    grad_penalty_discriminator: 10
+    weight_decay_discriminator: 0
     eps: 1.0e-5
 
 
@@ -89,7 +136,7 @@ eval:
   # number of samples to estimate zr
   num_inference_samples: 50_000
   num_inference_goals: 500
-  eval_every_steps: 100_000
+  eval_every_steps: 1_000_000
   # "Throw" translates into "Slide" in env_params.case
   eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]
 
