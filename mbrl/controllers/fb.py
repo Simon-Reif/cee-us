@@ -106,7 +106,7 @@ class ForwardBackwardController():
         return z
 
 
-    def update(self, replay_buffer, step: int) -> Dict[str, torch.Tensor]:
+    def update(self, replay_buffer: RolloutBuffer, step: int) -> Dict[str, torch.Tensor]:
         batch = replay_buffer.sample(self.params.train.batch_size)
 
         obs, action, next_obs, terminated = (
@@ -117,12 +117,18 @@ class ForwardBackwardController():
         )
         discount = self.params.train.discount * ~terminated.astype(np.bool)
         obs, action, next_obs, discount = torch_helpers.to_tensor_device(obs, action, next_obs, discount)
-   
+
+        # print(f"discount: {discount}")
+        # print(f"obs: {obs[0]}")
+        # print(f"action: {action[0]}")
+        # print(f"next_obs: {next_obs[0]}")
+
         self._model._obs_normalizer(obs)
         self._model._obs_normalizer(next_obs)
         with torch.no_grad(), eval_mode(self._model._obs_normalizer):
             obs, next_obs = self._model._obs_normalizer(obs), self._model._obs_normalizer(next_obs)
 
+        
         #torch.compiler.cudagraph_mark_step_begin()
         z = self.sample_mixed_z(train_goal=next_obs).clone()
         #self.z_buffer.add(z)
@@ -346,11 +352,21 @@ class ForwardBackwardController():
         return agent
 
     @torch.no_grad()
-    def get_action(self, obs, state=None, mode="test"):
-        if self.z_r is None:
+    def get_action(self, obs, z=None, state=None, mode="test"):
+        if self.z_r is None and z is None:
             raise AttributeError("z_r not set")
+        if z is not None:
+            z_r=z
+        else:
+            z_r=self.z_r
         obs = torch_helpers.to_tensor(obs).to(torch_helpers.device)
-        act = self.act(obs, self.z_r, mean=True)
+        #only single obs should be here
+        obs = obs.reshape(1, -1)
+        z_r = z_r.reshape(1, -1)
+        #TODO: normalize here?
+
+        act = self.act(obs, z_r, mean=True)
+        act = act.squeeze(0)
         return torch_helpers.to_numpy(act)
         
 '''
