@@ -1,3 +1,4 @@
+### for running FB learning and evaluation on offline playdata
 import logging
 import os
 import pickle
@@ -6,6 +7,8 @@ import torch
 import wandb
 from tqdm import tqdm
 from collections import defaultdict
+
+import yaml
 
 from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
@@ -44,6 +47,15 @@ def main(params):
         buffer = get_buffer_wo_goals(raw_buffer, env)
         with open(wog_path, "wb") as f:
                     pickle.dump(buffer, f)
+    buffer_meta_path=os.path.join(params.training_data_dir, 'rollouts_meta.npy')
+    if os.path.exists(buffer_meta_path):
+        stats_dict = np.load(buffer_meta_path, allow_pickle=True).item()
+        obs_mean, obs_std = stats_dict["mean"], stats_dict["std"]
+    else:
+        obs_mean, obs_std = buffer.get_mean_std()
+        stats_dict={"mean": obs_mean, "std": obs_std}
+        np.save(buffer_meta_path, stats_dict)
+
 
     obs_dim=buffer[0]["observations"].shape[-1]
     action_dim=buffer[0]["actions"].shape[-1]
@@ -62,7 +74,9 @@ def main(params):
     else:
         fb_controller = ForwardBackwardController(params_copy.controller_params)
 
-    #fb_controller = ForwardBackwardController(params.controller_params, obs_dim, act_dim)
+    #for normalization during interaction with env
+    fb_controller.set_data_stats(obs_mean, obs_std)
+    
     save_settings_to_json(params_copy, params.working_dir)
 
     # print("_______________Debugging_______________")

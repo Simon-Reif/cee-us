@@ -31,6 +31,8 @@ class ForwardBackwardController():
         self.setup_training()
         self.setup_compile()
         self._model.to(torch_helpers.device)
+        self.data_mean = None
+        self.data_std = None
 
 
     def setup_training(self) -> None:
@@ -360,14 +362,19 @@ class ForwardBackwardController():
         else:
             z_r=self.z_r
         obs = torch_helpers.to_tensor(obs).to(torch_helpers.device)
+        if self.params.model.norm_obs:
+            obs = (obs-self.data_mean)/self.data_std
         #only single obs should be here
         obs = obs.reshape(1, -1)
         z_r = z_r.reshape(1, -1)
         #TODO: normalize here?
-
         act = self.act(obs, z_r, mean=True)
         act = act.squeeze(0)
         return torch_helpers.to_numpy(act)
+    
+    def set_data_stats(self, data_mean, data_std):
+        self.data_mean = torch_helpers.to_tensor(data_mean).to(torch_helpers.device)
+        self.data_std = torch_helpers.to_tensor(data_std).to(torch_helpers.device)
         
 '''
 RolloutBuffer:

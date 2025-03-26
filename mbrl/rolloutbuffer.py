@@ -19,6 +19,7 @@ class Rollout(object):
         "model_states",
         "successes",
         "is_success",
+        "z",
     }
 
     # tried to add __setitem__ here for convenience
@@ -261,6 +262,13 @@ class RolloutBuffer(abc.Sequence):
     def get_random_transitions(self, num_samples):
         samples = self.sample(num_samples)
         return samples["observations"], samples["actions"], samples["next_observations"]
+    
+    def get_mean_std(self):
+        flat_rollouts = self.flat
+        obs = np.append(flat_rollouts["observations"], flat_rollouts["next_observations"], axis=0)
+        mean = np.mean(obs, axis=0)
+        std = np.std(obs, axis=0)
+        return mean, std
 
     @property
     def mean_avg_reward(self):
