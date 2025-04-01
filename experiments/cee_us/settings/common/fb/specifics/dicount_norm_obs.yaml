@@ -1,0 +1,9 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/04_01/discount90_norm_obs"
+controller_params:
+  train:
+    discount: 0.9
+  model:
+    norm_obs: true
