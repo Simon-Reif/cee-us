@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/03_25/discount50"
+working_dir: "results/cee_us/construction/2blocks/04_02/discount95"
 controller_params:
   train:
-    discount: 0.5
+    discount: 0.95
