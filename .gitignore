@@ -1,6 +1,7 @@
 slurm-outputs
 sandbox
 wandb
+datasets/construction/fb
 figures/
 *.prof
 # Byte-compiled / optimized / DLL files
