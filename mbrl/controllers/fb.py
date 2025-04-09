@@ -367,7 +367,6 @@ class ForwardBackwardController():
         #only single obs should be here
         obs = obs.reshape(1, -1)
         z_r = z_r.reshape(1, -1)
-        #TODO: normalize here?
         act = self.act(obs, z_r, mean=True)
         act = act.squeeze(0)
         return torch_helpers.to_numpy(act)

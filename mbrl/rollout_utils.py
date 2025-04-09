@@ -12,6 +12,8 @@ from mbrl import allogger
 from mbrl.base_types import Controller
 from mbrl.controllers.abstract_controller import ParallelController
 from mbrl.controllers.fb import ForwardBackwardController
+from mbrl.controllers.bc import BehaviorCloningController
+from mbrl.controllers.fb_cpr import FBcprController
 from mbrl.environments.abstract_environments import (
     GoalSpaceEnvironmentInterface,
     GroundTruthSupportEnv,
@@ -267,8 +269,10 @@ class RolloutManager:
                     start_time = time.time()
                 state = RolloutManager.supply_env_state(env, use_env_states)
                 try:
-                    if isinstance(policy, ForwardBackwardController):
+                    #TODO: refactor to use obs wog for various controllers
+                    if isinstance(policy, ForwardBackwardController) or isinstance(policy, BehaviorCloningController):
                         obs_wo_goal = env.observation_wo_goal(ob)
+
                         ac = policy.get_action(obs_wo_goal, state=state, mode=mode)
                     else:
                         ac = policy.get_action(ob, state=state, mode=mode)
@@ -322,6 +326,8 @@ class RolloutManager:
                     info_values = list(info_dict.values())
                     transition += info_values
 
+                if isinstance(policy, FBcprController):
+                    transition.append(policy.get_z())
                 transitions.append(tuple(transition))
 
                 ob = next_ob
@@ -361,6 +367,8 @@ class RolloutManager:
             fields += list(info_dict.keys())
         if isinstance(env, GoalSpaceEnvironmentInterface):
             fields.append("successes")
+        if isinstance(policy, FBcprController):
+            fields.append("z")
 
         rollout = Rollout(field_names=tuple(fields), transitions=transitions, strict_field_names=False)
 

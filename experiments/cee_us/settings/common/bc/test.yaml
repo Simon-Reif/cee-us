@@ -1,0 +1,8 @@
+__import__:
+  - "experiments/cee_us/settings/common/bc/basic.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/bc/flip/test/basic"
+
+debug: true
+logging:
+  project: "test"

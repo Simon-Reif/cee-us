@@ -1,0 +1,125 @@
+__import__:
+    - "experiments/defaults.yaml"
+    - "experiments/cee_us/settings/common/basic.yaml"
+
+training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem/checkpoints_000"
+working_dir: "results/cee_us/construction/2blocks/bc/flip/04_09/basic"
+# load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
+# continue_training: true
+num_train_steps: 1_000_000
+log_every_updates: 10_000
+#used in lieu of num_eval_episodes to use gen_rollouts function
+number_of_rollouts: 10
+
+debug: false
+logging:
+  project: "cee-us/bc"
+
+#base env, rollout_params; these settings aren't used
+env: "FetchPickAndPlaceConstruction"
+env_params:
+  sparse: False
+  shaped_reward: true
+  num_blocks: 2
+  stack_only: true
+  case: "Singletower"
+  visualize_target: true
+  visualize_mocap: false
+rollout_params:
+  render: false
+  render_initial: false
+  render_eval: false
+  record: false
+  only_final_reward: false
+  use_env_states: true
+  logging: true
+  task_horizon: 100
+
+controller: "bc"
+controller_params:
+  compile: false
+  cudagraphs: false
+  model:
+    actor_std: 0.2
+    norm_obs: false
+    seq_length: 1
+    archi:
+      actor:
+        hidden_dim: 1024
+        # to be close to fb actor with 2 hidden layers and 2 embedding layers
+        hidden_layers: 3
+        model: "simple"  # {'simple', 'residual'}
+
+  train:
+    batch_size: 1024
+    lr_actor: 1.0e-4
+    weight_decay: 0.0
+    clip_grad_norm: 0.0
+    stddev_clip: 0.3
+    eps: 1.0e-5
+
+
+  
+eval:
+  eval_every_steps: 100_000
+  # "Throw" translates into "Slide" in env_params.case
+  #eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]
+  eval_tasks: ["Flip"]
+
+#configs from 
+#experiments/cee_us/settings/construction/zero_shot_generalization/common/controller_<task>.yaml
+#with num_blocks: 2 for all
+eval_envs:
+  PickAndPlace:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: false
+      case: "PickAndPlace"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 400
+  Singletower:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: False
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: true
+      case: "Singletower"
+      visualize_target: true
+      visualize_mocap: false
+
+    rollout_params:
+      task_horizon: 600
+  # "Slide" stands for "Throw"
+  Throw:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: true
+      case: "Slide"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 200
+  Flip:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: true
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: false
+      case: "Flip" 
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 500
+
+
+  
+device: "cuda:0"

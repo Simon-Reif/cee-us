@@ -4,6 +4,7 @@ import numpy as np
 import smart_settings
 
 from mbrl.controllers.fb import ForwardBackwardController
+from mbrl.controllers.fb_cpr import FBcprController
 
 
 def _get_cp_dir(working_dir, iter):
@@ -12,7 +13,7 @@ def _get_cp_dir(working_dir, iter):
 # success_reats: numpy array
 # controller own save method
 # z_rs, bs numpy arrays
-def save_fb_checkpoint(working_dir, iter, success_rates_dict=None, controller:ForwardBackwardController=None, z_r_dict=None, bs=None, 
+def save_fb_checkpoint(working_dir, iter, success_rates_dict=None, controller=None, z_r_dict=None, bs=None, 
                        rollout_buffer_dict=None, loud=0):
     cp_dir = _get_cp_dir(working_dir, iter)
     os.makedirs(cp_dir, exist_ok=True)
@@ -53,17 +54,27 @@ def get_bs(working_dir, iter):
     return np.load(os.path.join(_get_cp_dir(working_dir, iter), "bs.npy"), allow_pickle=True)
 
 # we assume parameters are saved in working_dir/
-def get_fb_controller(working_dir, iter):
+def get_fb_controller(working_dir=None, iter=None, cp_dir=None, cpr=False):
+    if cp_dir is not None:
+        working_dir = os.path.dirname(cp_dir)
+    elif working_dir is not None and iter is not None:
+        cp_dir = _get_cp_dir(working_dir, iter)
+    else:
+        raise ValueError("Either cp_dir or working_dir and iter must be provided")
+
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
-    return ForwardBackwardController.load(_get_cp_dir(working_dir, iter), params.controller_params)
+    if cpr:
+        return FBcprController.load(cp_dir, params.controller_params)
+    else:
+        return ForwardBackwardController.load(cp_dir, params.controller_params)
 
 def mean_success_rates_to_csv(working_dir, iter):
     pass
 
 
-def get_latest_checkpoint(working_dir):
+def get_latest_checkpoint(working_dir, cpr=False):
     meta = smart_settings.load(os.path.join(working_dir, "meta.json"))
-    agent = get_fb_controller(working_dir, meta["latest_checkpoint"])
+    agent = get_fb_controller(working_dir=working_dir, iter=meta["latest_checkpoint"], cpr=cpr)
     return agent, meta["latest_checkpoint"]
 
 def save_meta(working_dir, iter):
