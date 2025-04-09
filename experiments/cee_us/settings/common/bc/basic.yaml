@@ -13,7 +13,7 @@ number_of_rollouts: 10
 
 debug: false
 logging:
-  project: "cee-us/bc"
+  project: "cee-us"
 
 #base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"

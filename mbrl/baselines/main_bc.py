@@ -166,7 +166,7 @@ if __name__ == "__main__":
     os.makedirs(params.working_dir, exist_ok=True)
 
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
-    wandb.init(project=params.logging.project, entity="srtea", config=params)
+    wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params)
 
     allogger.basic_configure(
         logdir=params.working_dir,
