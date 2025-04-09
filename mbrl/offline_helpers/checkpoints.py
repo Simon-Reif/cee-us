@@ -4,7 +4,7 @@ import numpy as np
 import smart_settings
 
 from mbrl.controllers.fb import ForwardBackwardController
-from mbrl.controllers.fb_cpr import FBcprController
+# from mbrl.controllers.fb_cpr import FBcprController
 
 
 def _get_cp_dir(working_dir, iter):
@@ -63,10 +63,10 @@ def get_fb_controller(working_dir=None, iter=None, cp_dir=None, cpr=False):
         raise ValueError("Either cp_dir or working_dir and iter must be provided")
 
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
-    if cpr:
-        return FBcprController.load(cp_dir, params.controller_params)
-    else:
-        return ForwardBackwardController.load(cp_dir, params.controller_params)
+    # if cpr:
+        # return FBcprController.load(cp_dir, params.controller_params)
+    # else:
+    return ForwardBackwardController.load(cp_dir, params.controller_params)
 
 def mean_success_rates_to_csv(working_dir, iter):
     pass

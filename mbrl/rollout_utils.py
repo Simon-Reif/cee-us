@@ -13,7 +13,7 @@ from mbrl.base_types import Controller
 from mbrl.controllers.abstract_controller import ParallelController
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.controllers.bc import BehaviorCloningController
-from mbrl.controllers.fb_cpr import FBcprController
+#from mbrl.controllers.fb_cpr import FBcprController
 from mbrl.environments.abstract_environments import (
     GoalSpaceEnvironmentInterface,
     GroundTruthSupportEnv,
@@ -326,8 +326,8 @@ class RolloutManager:
                     info_values = list(info_dict.values())
                     transition += info_values
 
-                if isinstance(policy, FBcprController):
-                    transition.append(policy.get_z())
+                # if isinstance(policy, FBcprController):
+                #     transition.append(policy.get_z())
                 transitions.append(tuple(transition))
 
                 ob = next_ob
@@ -367,8 +367,8 @@ class RolloutManager:
             fields += list(info_dict.keys())
         if isinstance(env, GoalSpaceEnvironmentInterface):
             fields.append("successes")
-        if isinstance(policy, FBcprController):
-            fields.append("z")
+        # if isinstance(policy, FBcprController):
+            # fields.append("z")
 
         rollout = Rollout(field_names=tuple(fields), transitions=transitions, strict_field_names=False)
 
