@@ -31,7 +31,7 @@ PROJECT_PATH=$LUST_WORK/cee-us
 # - set environment variables
 # - determine commandline arguments for `srun` calls
 cd $PROJECT_PATH
-singularity exec --nv $SING_PATH python mbrl/baselines/main_bc.py experiments/cee_us/settings/common/bc/basic.yaml
+singularity exec --nv $SING_PATH python mbrl/baselines/main_bc.py experiments/cee_us/settings/common/bc/flex.yaml
 # Compute Phase 
 
 #srun python3 runfile.py  # srun will automatically pickup the configuration defined via `#SBATCH` and `sbatch` command line arguments  

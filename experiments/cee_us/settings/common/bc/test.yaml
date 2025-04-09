@@ -6,3 +6,7 @@ working_dir: "results/cee_us/construction/2blocks/bc/flip/test/basic"
 debug: true
 logging:
   project: "test"
+
+controller_params:
+  model:
+    norm_obs: true

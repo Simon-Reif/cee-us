@@ -74,7 +74,7 @@ controller_params:
     actor_reg_coef: 0.01
     fb_pessimism_penalty: 0
     actor_pessimism_penalty: 0.5
-    discount: 0.98
+    discount: 0.90
     weight_decay: 0.0
     clip_grad_norm: 0.0
     stddev_clip: 0.3
