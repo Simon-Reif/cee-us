@@ -54,7 +54,7 @@ class BehaviorCloningController():
         dist = self._model._actor(obs, self._model.params.actor_std)
         action_bc = dist.sample(clip=self.params.train.stddev_clip)
         
-        bc_loss = -nn.MSELoss()(action_bc, action)
+        bc_loss = nn.MSELoss()(action_bc, action)
 
         self.actor_optimizer.zero_grad(set_to_none=True)
         bc_loss.backward()

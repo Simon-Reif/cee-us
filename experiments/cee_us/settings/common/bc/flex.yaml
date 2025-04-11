@@ -1,7 +1,7 @@
 __import__:
   - "experiments/cee_us/settings/common/bc/basic.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/bc/flip/04_09/norm_obs"
+working_dir: "results/cee_us/construction/2blocks/bc/flip/04_11/fixed_loss"
 
 
 controller_params:
