@@ -297,6 +297,8 @@ class ForwardBackwardController():
 
     
     # for calculating zr s for different tasks with same offline data
+    # TODO: with batch norm if norm obs parameter; separate function for individual states
+    # TODO: batch norm OR normalize with data mean, std?
     @torch.no_grad()
     def calculate_Bs(self, next_obs: torch.Tensor)->torch.Tensor:
         #TODO: maybe limit batch size
@@ -304,9 +306,29 @@ class ForwardBackwardController():
         bs=self._model._backward_map(next_obs)
         return bs
 
+
+    #TODO: next obs can be batch or single obs OR add batch dimension to use this function
+    # see: Metamotivo Paper p.28
+    @torch.no_grad()
+    def zr_from_goals(self, next_obs):
+        next_obs = self.maybe_normalize_obs(next_obs)
+        bs = self.calculate_Bs(next_obs)
+        z_r = torch.mean(bs, dim=0)
+        z_r = self.project_z(z_r)
+        return z_r
+
+
+    def maybe_normalize_obs(self, obs):
+        if self.params.model.norm_obs:
+            obs = (obs-self.data_mean)/self.data_std
+        return obs
+        
+        
+
     @torch.no_grad()
     def estimate_z_r(self, next_obs, goals, env: Env, bs=None, wr=True):
         if bs is None:
+            next_obs = self.maybe_normalize_obs(next_obs)
             bs = self.calculate_Bs(next_obs)
         rewards = env.compute_rewards_goal(torch_helpers.to_numpy(next_obs), goals)
         rewards = torch_helpers.to_tensor(rewards).to(torch_helpers.device)
@@ -362,8 +384,7 @@ class ForwardBackwardController():
         else:
             z_r=self.z_r
         obs = torch_helpers.to_tensor(obs).to(torch_helpers.device)
-        if self.params.model.norm_obs:
-            obs = (obs-self.data_mean)/self.data_std
+        obs = self.maybe_normalize_obs(obs)
         #only single obs should be here
         obs = obs.reshape(1, -1)
         z_r = z_r.reshape(1, -1)
