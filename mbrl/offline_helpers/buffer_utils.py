@@ -89,7 +89,7 @@ if __name__=="__main__":
     filename="rollouts_wog"
     import smart_settings
     from mbrl.environments import env_from_string
-    working_dir = f'results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem"'
+    working_dir = f'results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem'
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
     env = env_from_string(params.env, **params["env_params"])
     buffer_dir = os.path.join(working_dir, 'checkpoints_000')
