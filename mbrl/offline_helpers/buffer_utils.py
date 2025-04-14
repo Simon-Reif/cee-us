@@ -70,7 +70,9 @@ def repair_dtype_bug(buffer, save_path=None):
     new_rollouts = []
     for rollout in rollouts:
         new_dict = {field_name: copy.deepcopy(rollout[field_name]) for field_name in field_names}
-        new_dict["successes"] = rollout["successes"].squeeze(axis=1)
+        suc = rollout["successes"]
+        if suc.ndim > 1:
+            new_dict["successes"] = rollout["successes"].squeeze(axis=1)
         new_rollout = Rollout.from_dict(**new_dict)
         new_rollouts.append(new_rollout)
     new_buffer = RolloutBuffer(rollouts=new_rollouts)
