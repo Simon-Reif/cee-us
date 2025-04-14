@@ -107,7 +107,7 @@ if __name__=="__main__":
     for buffer_dir, target_path in zip(buffer_dirs, target_paths):
         with open(os.path.join(buffer_dir, "rollouts"), 'rb') as f:
             buffer = pickle.load(f)
-        buffer = get_buffer_wo_goals(buffer)
+        buffer = get_buffer_wo_goals(buffer, env)
         buffer = repair_dtype_bug(buffer, save_path=os.path.join(buffer_dir, "rollouts_wog"))
         buffer = combine_buffers(buffer_freeplay, buffer, save_path=target_path)
         print("Combined buffer contains {} rollouts, each with length {}".format(len(buffer), buffer[0]["observations"].shape[0]))
