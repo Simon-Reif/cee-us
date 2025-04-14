@@ -1,0 +1,12 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/data_fps/04_14/"
+
+training_data_dir: "datasets/construction/fb/freeplay_plus_stack"
+
+controller_params:
+  train:
+    discount: 0.90
+  model:
+    norm_obs: false
