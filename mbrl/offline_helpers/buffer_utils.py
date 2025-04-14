@@ -89,6 +89,30 @@ if __name__=="__main__":
     filename="rollouts_wog"
     import smart_settings
     from mbrl.environments import env_from_string
+    working_dir = f'results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem"'
+    params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
+    env = env_from_string(params.env, **params["env_params"])
+    buffer_dir = os.path.join(working_dir, 'checkpoints_000')
+    with open(os.path.join(buffer_dir, "rollouts"), 'rb') as f:
+        buffer = pickle.load(f)
+    buffer = get_buffer_wo_goals(buffer, env)
+    buffer = repair_dtype_bug(buffer, save_path=os.path.join(buffer_dir, "rollouts_wog"))
+
+    path_0 = "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem/checkpoints_000/rollouts_wog"
+    with open(path_0, 'rb') as f:
+        buffer_0 = pickle.load(f)
+    target_path = "results/cee_us/zero_shot/2blocks/225iters/construction_flip_3k/rollouts_wog"
+    buffer_comb = combine_buffers(buffer_0, buffer, save_path=target_path)
+        
+    
+
+    
+
+# in lieu of commenting out
+if False and __name__=="__main__":
+    filename="rollouts_wog"
+    import smart_settings
+    from mbrl.environments import env_from_string
     working_dir = f'results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay'
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
     env = env_from_string(params.env, **params["env_params"])
