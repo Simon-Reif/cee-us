@@ -1,7 +1,7 @@
 __import__:
   - "experiments/cee_us/settings/common/bc/basic.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/bc/flip/04_15/3keps"
+working_dir: "results/cee_us/construction/2blocks/bc/flip/3keps/04_15/wd01"
 training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip_3k"
 
 
@@ -11,7 +11,7 @@ controller_params:
     norm_obs: true
   train:
     lr_actor: 1.0e-4
-    weight_decay: 0.0
+    weight_decay: 0.1
     clip_grad_norm: 0.0
     stddev_clip: 0.3
     eps: 1.0e-5
