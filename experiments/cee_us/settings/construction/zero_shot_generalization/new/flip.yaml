@@ -28,6 +28,6 @@ number_of_rollouts: 1500
 # You can set the seed here in the following line!
 seed: 61743
 
-working_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem"
+working_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip_3/gnn_ensemble_icem"
 
 device: "cuda:0"
