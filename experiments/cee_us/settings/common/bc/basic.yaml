@@ -51,6 +51,8 @@ controller_params:
         model: "simple"  # {'simple', 'residual'}
 
   train:
+    # should theoretically do the same, still testing both
+    loss_fun: "mse" # "mse" or "log_prob"
     batch_size: 1024
     lr_actor: 1.0e-4
     weight_decay: 0.0

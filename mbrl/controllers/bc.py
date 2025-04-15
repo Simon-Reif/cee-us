@@ -52,9 +52,19 @@ class BehaviorCloningController():
         clip_grad_norm = self.params.train.clip_grad_norm if self.params.train.clip_grad_norm > 0 else None
 
         dist = self._model._actor(obs, self._model.params.actor_std)
-        action_bc = dist.sample(clip=self.params.train.stddev_clip)
-        
-        bc_loss = nn.MSELoss()(action_bc, action)
+
+        loss_key = self.params.train.loss
+        #theoretically the same, still testing for difference
+        if loss_key == "mse":
+            action_bc = dist.sample(clip=self.params.train.stddev_clip)
+            bc_loss = nn.MSELoss()(action_bc, action)
+        elif loss_key == "log_prob":
+            likelihood = dist.log_prob(action)
+            bc_loss = -likelihood.mean()
+        else:
+            raise ValueError(f"Unknown loss function {loss_key}")
+
+
 
         self.actor_optimizer.zero_grad(set_to_none=True)
         bc_loss.backward()
