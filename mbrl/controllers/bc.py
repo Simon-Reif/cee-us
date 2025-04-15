@@ -53,7 +53,7 @@ class BehaviorCloningController():
 
         dist = self._model._actor(obs, self._model.params.actor_std)
 
-        loss_key = self.params.train.loss
+        loss_key = self.params.train.loss_fun
         #theoretically the same, still testing for difference
         if loss_key == "mse":
             action_bc = dist.sample(clip=self.params.train.stddev_clip)
