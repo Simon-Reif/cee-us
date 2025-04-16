@@ -269,6 +269,11 @@ class RolloutBuffer(abc.Sequence):
         mean = np.mean(obs, axis=0)
         std = np.std(obs, axis=0)
         return mean, std
+    
+    def sample_start_states(self, num_samples):
+        indices = np.random.choice(len(self), num_samples, replace=False)
+        start_states = [self[index]["env_states"][0] for index in indices]
+        return start_states
 
     @property
     def mean_avg_reward(self):

@@ -14,7 +14,7 @@ from mbrl import allogger, torch_helpers
 from mbrl.controllers.bc import BehaviorCloningController
 from mbrl.environments import env_from_string
 from mbrl.helpers import gen_rollouts
-from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals
+from mbrl.offline_helpers.buffer_utils import load_buffer_wog
 from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
@@ -23,7 +23,7 @@ from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_chec
 from mbrl.offline_helpers.eval import calculate_success_rates, print_best_success_by_task, update_best_success_by_task
 
 
-def eval_bc(controller, params, t):
+def eval_bc(controller, params, t, train_data_buffer=None):
     if t is not None:
         print(f"Evaluation at iteration {t}")
     success_rates_eps_dict={}
@@ -38,6 +38,10 @@ def eval_bc(controller, params, t):
         #params.rollout_params.obs_wo_goals = True
         rollout_man = RolloutManager(env, params.rollout_params)
         rollout_buffer = RolloutBuffer()
+        if train_data_buffer is not None:
+            start_states = train_data_buffer.sample_start_states(params.number_of_rollouts)
+        else:
+            start_states = None
         rollout_buffer = gen_rollouts(
             params,
             rollout_man,
@@ -47,6 +51,7 @@ def eval_bc(controller, params, t):
             None, #forward_model
             t, #iteration
             False, #do_initial_rollouts
+            start_states=start_states,
         )
         success_rates_eps = calculate_success_rates(env, rollout_buffer)
         mean_success_rate = success_rates_eps.mean()
@@ -68,24 +73,8 @@ def main(params):
     params_copy["seed"] = Seeding.SEED
     
     #using params copy to use existing code defined on params with different tasks etc
-    
-    #TODO: for now assume we load buffer with goals in obs
-    #TODO: later save buffer without goals
 
-    wog_path=os.path.join(params.training_data_dir,'rollouts_wog')
-    if os.path.exists(wog_path):
-        print("Loading existing buffer without goals")
-        with open(os.path.join(params.training_data_dir, 'rollouts_wog'), 'rb') as f:
-            buffer = pickle.load(f)
-    else:
-        print("Extracting observations without goals and saving buffer")
-        with open(os.path.join(params.training_data_dir, 'rollouts'), 'rb') as f:
-            raw_buffer = pickle.load(f)
-        #TODO: pick out obs without goals, save
-        env = env_from_string(params.env, **params.env_params)
-        buffer = get_buffer_wo_goals(raw_buffer, env)
-        with open(wog_path, "wb") as f:
-                    pickle.dump(buffer, f)
+    buffer = load_buffer_wog(params_copy)
     buffer_meta_path=os.path.join(params.training_data_dir, 'rollouts_meta.npy')
 
     if os.path.exists(buffer_meta_path):
@@ -127,14 +116,15 @@ def main(params):
             wandb.log(metrics, step=iteration)
             allogger.get_root().flush(children=True)
 
-
         ### Debug
         if debug:
             params_copy["number_of_rollouts"] = 2
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
-            
-            success_rates_eps, success_rates = eval_bc(bc_controller, params_copy, iteration)
+            if params_copy.eval.start_states_from_train_data:
+                success_rates_eps, success_rates = eval_bc(bc_controller, params_copy, iteration, train_data_buffer=buffer)
+            else:
+                success_rates_eps, success_rates = eval_bc(bc_controller, params_copy, iteration)
             # TODO: move this into eval
             updated = update_best_success_by_task(best_success_by_task, success_rates, iteration, debug)
             if updated:

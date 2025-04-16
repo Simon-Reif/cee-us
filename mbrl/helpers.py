@@ -254,7 +254,9 @@ def gen_rollouts(
     forward_model,
     iteration,
     do_initial_rollouts,
-    mode="train"
+    mode="train",
+    start_states=None
+
 
 ):
 
@@ -280,6 +282,7 @@ def gen_rollouts(
                 mode=mode,
                 name=mode,
                 no_rollouts=number_of_rollouts,
+                start_state=start_states
             )
         )
 
