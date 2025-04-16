@@ -10,3 +10,6 @@ logging:
 controller_params:
   model:
     norm_obs: true
+
+eval:
+  start_states_from_train_data: true

@@ -125,10 +125,15 @@ class ForwardBackwardController():
         # print(f"action: {action[0]}")
         # print(f"next_obs: {next_obs[0]}")
 
-        self._model._obs_normalizer(obs)
-        self._model._obs_normalizer(next_obs)
-        with torch.no_grad(), eval_mode(self._model._obs_normalizer):
-            obs, next_obs = self._model._obs_normalizer(obs), self._model._obs_normalizer(next_obs)
+
+        if self.params.model.norm_with_entire_buffer:
+            obs = self.maybe_normalize_obs(obs)
+            next_obs = self.maybe_normalize_obs(next_obs)
+        else:
+            self._model._obs_normalizer(obs)
+            self._model._obs_normalizer(next_obs)
+            with torch.no_grad(), eval_mode(self._model._obs_normalizer):
+                obs, next_obs = self._model._obs_normalizer(obs), self._model._obs_normalizer(next_obs)
 
         
         #torch.compiler.cudagraph_mark_step_begin()
@@ -317,7 +322,7 @@ class ForwardBackwardController():
         z_r = self.project_z(z_r)
         return z_r
 
-
+    @torch.no_grad()
     def maybe_normalize_obs(self, obs):
         if self.params.model.norm_obs:
             obs = (obs-self.data_mean)/self.data_std

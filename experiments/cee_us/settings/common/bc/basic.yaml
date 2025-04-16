@@ -63,6 +63,7 @@ controller_params:
 
   
 eval:
+  start_states_from_train_data: false
   eval_every_steps: 100_000
   # "Throw" translates into "Slide" in env_params.case
   #eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]

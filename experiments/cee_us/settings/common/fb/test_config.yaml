@@ -3,7 +3,7 @@ __import__:
     - "experiments/cee_us/settings/common/basic.yaml"
 
 training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
-working_dir: "results/cee_us/construction/2blocks/test_clip_grad1"
+working_dir: "results/cee_us/construction/2blocks/test_norm_with_entire_buffer"
 #load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
 continue_training: false
 num_train_steps: 3_000_000
@@ -42,7 +42,8 @@ controller_params:
   model:
     inference_batch_size: 500_000
     actor_std: 0.2
-    norm_obs: false
+    norm_obs: true
+    norm_with_entire_buffer: true
     seq_length: 1
     archi:
       z_dim: 100
