@@ -1,0 +1,16 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/data_fpf/04_20/cont_fpf"
+
+# https://wandb.ai/srtea/cee-us/runs/xm40rl8a/overview
+load_agent: "results/cee_us/construction/2blocks/data_fpf/04_09/disc90/checkpoint_3000000"
+
+
+training_data_dir: "datasets/construction/fb/freeplay_plus_flip"
+
+controller_params:
+  train:
+    discount: 0.90
+  model:
+    norm_obs: false
