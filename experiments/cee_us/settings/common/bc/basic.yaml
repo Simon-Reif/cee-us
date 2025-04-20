@@ -6,7 +6,7 @@ training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip/
 working_dir: "results/cee_us/construction/2blocks/bc/flip/04_09/basic"
 # load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
 # continue_training: true
-num_train_steps: 1_000_000
+num_train_steps: 3_000_000
 log_every_updates: 10_000
 #used in lieu of num_eval_episodes to use gen_rollouts function
 number_of_rollouts: 10
