@@ -7,9 +7,8 @@ training_data_dir: "datasets/construction/fb/freeplay_plus_throw"
 
 controller_params:
   model:
+    norm_obs: false
     archi:
       z_dim: 200
   train:
     discount: 0.90
-  model:
-    norm_obs: false
