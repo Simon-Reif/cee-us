@@ -2,7 +2,7 @@ __import__:
   - "experiments/cee_us/settings/common/bc/basic.yaml"
 
 working_dir: "results/cee_us/construction/2blocks/bc/flip/3keps/04_20/lr5"
-training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip_3k"
+training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip_4500"
 
 
 controller_params:
