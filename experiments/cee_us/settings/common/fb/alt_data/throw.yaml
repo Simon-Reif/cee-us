@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/data_fpt/04_20/zdim_200"
+working_dir: "results/cee_us/construction/2blocks/data_fpt/04_23/zdim_50"
 
 training_data_dir: "datasets/construction/fb/freeplay_plus_throw"
 
@@ -9,6 +9,6 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 200
+      z_dim: 50
   train:
     discount: 0.90
