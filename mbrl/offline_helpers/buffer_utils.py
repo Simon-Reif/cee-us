@@ -56,7 +56,7 @@ def combine_buffers(buffer_1, buffer_2, save_path=None):
 def combine_buffer_list(buffer_list, save_path=None):
     new_rollouts = copy.deepcopy(buffer_list[0].rollouts)
     for i in range(1, len(buffer_list)):
-        new_rollouts.extend(buffer[i].rollouts)
+        new_rollouts.extend(buffer_list[i].rollouts)
     new_buffer = RolloutBuffer(rollouts=new_rollouts._list)
     if save_path is not None:
         dir = os.path.dirname(save_path)
