@@ -53,6 +53,20 @@ def combine_buffers(buffer_1, buffer_2, save_path=None):
             pickle.dump(new_buffer, f)
     return new_buffer
 
+def combine_buffer_list(buffer_list, save_path=None):
+    new_rollouts = copy.deepcopy(buffer_list[0].rollouts)
+    for i in range(1, len(buffer_list)):
+        new_rollouts.extend(buffer[i].rollouts)
+    new_buffer = RolloutBuffer(rollouts=new_rollouts._list)
+    if save_path is not None:
+        dir = os.path.dirname(save_path)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        with open(save_path, "wb") as f:
+            pickle.dump(new_buffer, f)
+    return new_buffer
+
+
 def combine_buffers_from_dirs(path_1, path_2, path_combined=None):
     with open(path_1, 'rb') as f:
         buffer_1 = pickle.load(f)
@@ -85,13 +99,24 @@ def repair_dtype_bug(buffer, save_path=None):
     return new_buffer
 
 
-if False and __name__ == "__main__":
+if __name__ == "__main__":
+    target_path="datasets/construction/fb/freeplay_plus_planners/rollouts_wog"
     task_strings = ["flip", "throw", "pp", "stack"]
     dirs_panner = [f"results/cee_us/zero_shot/2blocks/225iters/construction_{task}/gnn_ensemble_icem/checkpoints_000/rollouts_wog" 
                    for task in task_strings]
+    dir_fp = "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/rollouts_wog"
+    dirs = [dir_fp] + dirs_panner
+    buffer_list=[]
+    for dir in dirs:
+        with open(dir, 'rb') as f:
+            buffer = pickle.load(f)
+            buffer_list.append(buffer)
+    buffer_comb = combine_buffer_list(buffer_list, save_path=target_path)
+    print("Combined buffer contains {} rollouts, each with length {}".format(len(buffer_comb), buffer_comb[0]["observations"].shape[0]))
+    print(f"Combined buffer saved to {target_path}")
     
 
-if __name__=="__main__":
+if False and __name__=="__main__":
     filename="rollouts_wog"
     import smart_settings
     from mbrl.environments import env_from_string
