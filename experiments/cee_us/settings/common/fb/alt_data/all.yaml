@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/data_all/04_23/basic"
+working_dir: "results/cee_us/construction/2blocks/data_all/04_24/pess_pen"
 
 training_data_dir: "datasets/construction/fb/freeplay_plus_planners"
 
@@ -12,3 +12,4 @@ controller_params:
       z_dim: 100
   train:
     discount: 0.90
+    fb_pessimism_penalty: 0.1
