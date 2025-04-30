@@ -50,7 +50,7 @@ if __name__ == "__main__":
         stats = {"mean_success_rate": mean_success_csr,
                 "num_eps_with_succ_one_block": num_eps_with_succ_one_block,
                 "num_eps_with_succ_two_blocks": num_eps_with_succ_two_blocks,}
-        dict_pathname=os.join.path(dir, "stats.yaml")
+        dict_pathname=os.path.join(dir, "stats.yaml")
         with open(dict_pathname, 'w') as f:
             yaml.dump(stats, f, default_flow_style=False, sort_keys=False)
 
