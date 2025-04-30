@@ -20,7 +20,7 @@ if __name__ == "__main__":
         with open(buff_path, 'rb') as f:
             buffer = pickle.load(f)
         
-        success_rates_per_episode = calculate_success_rates(buffer)
+        success_rates_per_episode = calculate_success_rates(env, buffer)
         mean_success_csr = np.mean(success_rates_per_episode)
         print(f"Mean success at {env.case} calculated by 'calculate success_rates': {mean_success_csr}")
 
