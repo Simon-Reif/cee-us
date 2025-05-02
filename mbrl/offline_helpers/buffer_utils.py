@@ -2,10 +2,26 @@ import copy
 import pickle
 import os
 
+import numpy as np
+
 
 
 from mbrl.environments.abstract_environments import MaskedGoalSpaceEnvironmentInterface
 from mbrl.rolloutbuffer import Rollout, RolloutBuffer
+
+
+# indices of the last timestep of each episode
+def truncate_episodes(buffer: RolloutBuffer, indices, save_path=None):
+    new_buffer = copy.deepcopy(buffer)
+    for i in range(len(buffer)):
+        new_buffer[i]._data = buffer[i]._data[:indices[i]+1]
+    if save_path is not None:
+        dir = os.path.dirname(save_path)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        with open(save_path, "wb") as f:
+            pickle.dump(new_buffer, f)
+    return new_buffer
 
 
 def get_buffer_wo_goals(buffer:RolloutBuffer, env: MaskedGoalSpaceEnvironmentInterface):
@@ -100,6 +116,30 @@ def repair_dtype_bug(buffer, save_path=None):
 
 
 if __name__ == "__main__":
+    import smart_settings
+    from mbrl.environments import env_from_string
+    dir = "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem"
+    params = smart_settings.load(os.path.join(dir, 'settings.json'), make_immutable=True)
+    env = env_from_string(params.env, **params["env_params"])
+    buff_dir = os.path.join(dir, 'checkpoints_000')
+    with open(os.path.join(buff_dir, "rollouts"), 'rb') as f:
+        buffer_with_goals = pickle.load(f)
+    indices = []
+    for i in range(len(buffer_with_goals)):
+        rollout_success = env.eval_success(buffer_with_goals[i]["next_observations"])
+        vals, unique_indices = np.unique(rollout_success, return_index=True)
+        if 2 in vals:
+            indices.append(unique_indices[vals==2][0])
+        else:
+            indices.append(len(rollout_success))
+    print("Indices of last timestep of each episode: ", indices)
+    with open(os.path.join(buff_dir, "rollouts_wog"), 'rb') as f:
+        buffer_wog = pickle.load(f)
+    new_path = "datasets/construction/bc/truncated/flip/rollouts_wog"
+    truncate_episodes(buffer_wog, indices, save_path=new_path)
+
+
+if False and __name__ == "__main__":
     target_path="datasets/construction/fb/freeplay_plus_planners/rollouts_wog"
     task_strings = ["flip", "throw", "pp", "stack"]
     dirs_panner = [f"results/cee_us/zero_shot/2blocks/225iters/construction_{task}/gnn_ensemble_icem/checkpoints_000/rollouts_wog" 
