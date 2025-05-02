@@ -2,7 +2,7 @@ __import__:
   - "experiments/cee_us/settings/common/bc/basic.yaml"
 
 working_dir: "results/cee_us/construction/2blocks/bc/flip/truncated/05_02/basic"
-training_data_dir: "datasets/construction/bc/truncated/flip/rollouts_wog"
+training_data_dir: "datasets/construction/bc/truncated/flip"
 
 
 controller_params:
