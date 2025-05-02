@@ -1,8 +1,8 @@
 __import__:
   - "experiments/cee_us/settings/common/bc/basic.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/bc/flip/4500eps/04_24/lr3"
-training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip_4500"
+working_dir: "results/cee_us/construction/2blocks/bc/flip/truncated/05_02/basic"
+training_data_dir: "datasets/construction/bc/truncated/flip/rollouts_wog"
 
 
 controller_params:
@@ -11,7 +11,7 @@ controller_params:
     norm_obs: false
   train:
     loss_fun: "log_prob" # "log_prob" or "mse"
-    lr_actor: 1.0e-3
+    lr_actor: 1.0e-4
     weight_decay: 0.0
     clip_grad_norm: 0.0
     stddev_clip: 0.3
