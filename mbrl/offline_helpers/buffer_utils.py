@@ -10,6 +10,11 @@ from mbrl.environments.abstract_environments import MaskedGoalSpaceEnvironmentIn
 from mbrl.rolloutbuffer import Rollout, RolloutBuffer
 
 
+def filter_buffer_by_length(buffer, max_length=None):
+    new_rollouts = [copy.deepcopy(rollout) for rollout in buffer if len(rollout) <= max_length]
+    return RolloutBuffer(rollouts=new_rollouts)
+
+
 # indices of the last timestep of each episode
 def truncate_episodes(buffer: RolloutBuffer, indices, save_path=None):
     new_buffer = copy.deepcopy(buffer)
@@ -118,25 +123,28 @@ def repair_dtype_bug(buffer, save_path=None):
 if __name__ == "__main__":
     import smart_settings
     from mbrl.environments import env_from_string
-    dir = "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem"
-    params = smart_settings.load(os.path.join(dir, 'settings.json'), make_immutable=True)
+    dirs = ["results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem",
+            "results/cee_us/zero_shot/2blocks/225iters/construction_flip_3/gnn_ensemble_icem",]
+    target_paths = ["datasets/construction/bc/truncated/flip_2/rollouts_wog",
+                   "datasets/construction/bc/truncated/flip_3/rollouts_wog",]
+    params = smart_settings.load(os.path.join(dirs[0], 'settings.json'), make_immutable=True)
     env = env_from_string(params.env, **params["env_params"])
-    buff_dir = os.path.join(dir, 'checkpoints_000')
-    with open(os.path.join(buff_dir, "rollouts"), 'rb') as f:
-        buffer_with_goals = pickle.load(f)
-    indices = []
-    for i in range(len(buffer_with_goals)):
-        rollout_success = env.eval_success(buffer_with_goals[i]["next_observations"])
-        vals, unique_indices = np.unique(rollout_success, return_index=True)
-        if 2 in vals:
-            indices.append(unique_indices[vals==2][0])
-        else:
-            indices.append(len(rollout_success))
-    print("Indices of last timestep of each episode: ", indices)
-    with open(os.path.join(buff_dir, "rollouts_wog"), 'rb') as f:
-        buffer_wog = pickle.load(f)
-    new_path = "datasets/construction/bc/truncated/flip/rollouts_wog"
-    truncate_episodes(buffer_wog, indices, save_path=new_path)
+    buff_dirs = [os.path.join(dir, 'checkpoints_000') for dir in dirs]
+    for buff_dir, target_path in zip(buff_dirs, target_paths):
+        with open(os.path.join(buff_dir, "rollouts"), 'rb') as f:
+            buffer_with_goals = pickle.load(f)
+        indices = []
+        for i in range(len(buffer_with_goals)):
+            rollout_success = env.eval_success(buffer_with_goals[i]["next_observations"])
+            vals, unique_indices = np.unique(rollout_success, return_index=True)
+            if 2 in vals:
+                indices.append(unique_indices[vals==2][0])
+            else:
+                indices.append(len(rollout_success))
+        print("Indices of last timestep of each episode: ", indices)
+        with open(os.path.join(buff_dir, "rollouts_wog"), 'rb') as f:
+            buffer_wog = pickle.load(f)
+        truncate_episodes(buffer_wog, indices, save_path=target_path)
 
 
 if False and __name__ == "__main__":
@@ -155,7 +163,6 @@ if False and __name__ == "__main__":
     print("Combined buffer contains {} rollouts, each with length {}".format(len(buffer_comb), buffer_comb[0]["observations"].shape[0]))
     print(f"Combined buffer saved to {target_path}")
     
-
 if False and __name__=="__main__":
     filename="rollouts_wog"
     import smart_settings
@@ -175,10 +182,6 @@ if False and __name__=="__main__":
     target_path = "results/cee_us/zero_shot/2blocks/225iters/construction_flip_4500/rollouts_wog"
     buffer_comb = combine_buffers(buffer_0, buffer, save_path=target_path)
         
-    
-
-    
-
 # in lieu of commenting out
 if False and __name__=="__main__":
     filename="rollouts_wog"
