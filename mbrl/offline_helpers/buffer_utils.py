@@ -137,7 +137,7 @@ if __name__ == "__main__":
         with open(path_trunc, 'rb') as f:
             buffer_trunc = pickle.load(f)
         buffer_filtered = filter_buffer_by_length(buffer_trunc, max_length=99)
-        save_buffer(buffer_filtered, os.path.join(target_dir))
+        save_buffer(buffer_filtered, os.path.join(target_dir, "rollouts_wog"))
         num_eps = len(buffer_filtered)
         length_eps = buffer_filtered.get_lengths_rollouts()
         mean_length = np.mean(length_eps)
