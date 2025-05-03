@@ -9,6 +9,12 @@ import numpy as np
 from mbrl.environments.abstract_environments import MaskedGoalSpaceEnvironmentInterface
 from mbrl.rolloutbuffer import Rollout, RolloutBuffer
 
+def save_buffer(buffer, save_path):
+    dir = os.path.dirname(save_path)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    with open(save_path, "wb") as f:
+        pickle.dump(buffer, f)
 
 def filter_buffer_by_length(buffer, max_length=None):
     new_rollouts = [copy.deepcopy(rollout) for rollout in buffer if len(rollout) <= max_length]
@@ -119,8 +125,34 @@ def repair_dtype_bug(buffer, save_path=None):
             pickle.dump(new_buffer, f)
     return new_buffer
 
-
 if __name__ == "__main__":
+    import yaml
+    paths_trunc = ["datasets/construction/bc/truncated/flip/rollouts_wog",
+                    "datasets/construction/bc/truncated/flip_2/rollouts_wog",
+                   "datasets/construction/bc/truncated/flip_3/rollouts_wog",]
+    target_dirs = ["datasets/construction/filtered/flip",
+                   "datasets/construction/filtered/flip_2",
+                   "datasets/construction/filtered/flip_3",]
+    for path_trunc, target_dir in zip(paths_trunc, target_dirs):
+        with open(path_trunc, 'rb') as f:
+            buffer_trunc = pickle.load(f)
+        buffer_filtered = filter_buffer_by_length(buffer_trunc, max_length=99)
+        save_buffer(buffer_filtered, os.path.join(target_dir))
+        num_eps = len(buffer_filtered)
+        length_eps = buffer_filtered.get_lengths_rollouts()
+        mean_length = np.mean(length_eps)
+        print(f"Filtered buffer contains {num_eps} rollouts.")
+        print(f"Mean length of rollouts: {mean_length}")
+        meta_dict = {"num_eps": num_eps, "mean_length": mean_length}
+        dict_pathname=os.path.join(target_dir, "stats.yaml")
+        with open(dict_pathname, 'w') as f:
+            yaml.dump(meta_dict, f, default_flow_style=False, sort_keys=False)
+
+
+
+    
+
+if True and __name__ == "__main__":
     import smart_settings
     from mbrl.environments import env_from_string
     dirs = ["results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem",

@@ -53,6 +53,9 @@ class Rollout(object):
 
     def field_names(self):
         return [d[0] for d in self.dtype]
+    
+    def truncate(self, end_index):
+        new_transitions = [field_data[:end_index] for field_data in self._data]
 
 
 # noinspection PyAbstractClass
@@ -274,6 +277,14 @@ class RolloutBuffer(abc.Sequence):
         indices = np.random.choice(len(self), num_samples, replace=False)
         start_states = [self[index]["env_states"][0] for index in indices]
         return start_states
+    
+    def get_last_obs(self):
+        last_obs = [rollout["next_observations"][-1] for rollout in self.rollouts]
+        last_obs = np.array(last_obs)
+        return last_obs
+    
+    def get_lengths_rollouts(self):
+        return np.array([len(rollout) for rollout in self.rollouts])
 
     @property
     def mean_avg_reward(self):
