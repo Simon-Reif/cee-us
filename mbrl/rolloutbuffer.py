@@ -221,6 +221,10 @@ class RolloutBuffer(abc.Sequence):
             raise TypeError(
                 f"Turning rollout structure into numpy array failed." f" Rollouts of unequal length? Error: {e}"
             )
+        
+    def rollouts_at_indices(self, indices):
+        new_rollouts = [self.rollouts[i] for i in indices]
+        return RolloutBuffer(rollouts=new_rollouts)
 
     @property
     def latest_rollouts(self):
@@ -242,8 +246,7 @@ class RolloutBuffer(abc.Sequence):
         if num_rollouts > len(self.rollouts):
             raise ValueError(f"Requested {num_rollouts} rollouts, but only {len(self.rollouts)} available.")
         indices = np.random.choice(len(self.rollouts), num_rollouts, replace=False)
-        random_rollouts = self.rollouts[indices]
-        return RolloutBuffer(rollouts=random_rollouts)
+        return self.rollouts_at_indices(indices)
 
     def n_iterations(self, start_iter=0, end_iter=1):
         return self.n_rollouts(
