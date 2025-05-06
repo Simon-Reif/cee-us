@@ -3,11 +3,15 @@ import pickle
 import os
 
 import numpy as np
+import smart_settings
+import yaml
 
 
 
+from mbrl.environments import env_from_string
 from mbrl.environments.abstract_environments import MaskedGoalSpaceEnvironmentInterface
 from mbrl.rolloutbuffer import Rollout, RolloutBuffer
+
 
 def save_buffer(buffer, save_path):
     dir = os.path.dirname(save_path)
@@ -16,9 +20,12 @@ def save_buffer(buffer, save_path):
     with open(save_path, "wb") as f:
         pickle.dump(buffer, f)
 
-def filter_buffer_by_length(buffer, max_length=None):
+def filter_buffer_by_length(buffer, max_length=None, save_path=None):
     new_rollouts = [copy.deepcopy(rollout) for rollout in buffer if len(rollout) <= max_length]
-    return RolloutBuffer(rollouts=new_rollouts)
+    new_buffer = RolloutBuffer(rollouts=new_rollouts)
+    if save_path is not None:
+        save_buffer(new_buffer, save_path)
+    return new_buffer
 
 
 # indices of the last timestep of each episode
@@ -27,11 +34,7 @@ def truncate_episodes(buffer: RolloutBuffer, indices, save_path=None):
     for i in range(len(buffer)):
         new_buffer[i]._data = buffer[i]._data[:indices[i]+1]
     if save_path is not None:
-        dir = os.path.dirname(save_path)
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        with open(save_path, "wb") as f:
-            pickle.dump(new_buffer, f)
+        save_buffer(new_buffer, save_path)
     return new_buffer
 
 
@@ -125,7 +128,83 @@ def repair_dtype_bug(buffer, save_path=None):
             pickle.dump(new_buffer, f)
     return new_buffer
 
-if __name__ == "__main__":
+# min_successses : {1,2}
+def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99):
+    trunc_subdir = os.path.join(buffer_dir, 'truncated')   
+    os.makedirs(trunc_subdir)
+    filtered_subdir = os.path.join(buffer_dir, 'filtered')
+    os.makedirs(filtered_subdir)
+    params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
+    env = env_from_string(params.env, **params["env_params"])
+    
+    with open(os.path.join(buffer_dir, "rollouts"), 'rb') as f:
+        buffer_with_goals = pickle.load(f)
+    buffer_with_goals = repair_dtype_bug(buffer_with_goals)
+    buffer_wog = get_buffer_wo_goals(buffer_with_goals, env)
+    with open(os.path.join(buffer_dir, "rollouts_wog"), "wb") as f:
+                    pickle.dump(buffer_wog, f)
+    stats_dict = {}
+    eps_successes = []
+    first_successes_one_block =[]
+    first_successes_two_blocks = []
+    indices=[]
+    for i in range(len(buffer_with_goals)):
+        timestep_successes = env.eval_success(buffer_with_goals[i]["next_observations"])
+        vals, unique_indices = np.unique(timestep_successes, return_index=True)
+        
+        idcs_ones = vals==1
+        if any(idcs_ones):
+            first_succ_one_block = unique_indices[idcs_ones][0]
+            first_successes_one_block.append(first_succ_one_block)
+        idcs_twos = vals==2
+        if any(idcs_twos):
+            first_succ_two_blocks = unique_indices[idcs_twos][0]
+            first_successes_two_blocks.append(first_succ_two_blocks)
+        
+        # TODO: change this part for other tasks than Throw&
+        if min_successes in vals:
+            timestep = unique_indices[vals==min_successes][0]
+            indices.append(timestep)
+        else:
+            indices.append(len(timestep_successes))
+        # as in "calculate success rates" function
+        eps_successes.append(timestep_successes[-1]/env.nObj)
+        
+    
+    eps_successes = np.array(eps_successes)
+    mean_success, std_successes = eps_successes.mean(), eps_successes.std()
+    first_successes_one_block = np.array(first_successes_one_block)
+    first_successes_two_blocks = np.array(first_successes_two_blocks)
+    mean_first_success_one_block = first_successes_one_block.mean() if len(first_successes_one_block) > 0 else None
+    mean_first_success_two_blocks = first_successes_two_blocks.mean() if len(first_successes_two_blocks) > 0 else None
+    num_success_one_block = len(first_successes_one_block)
+    num_success_two_blocks = len(first_successes_two_blocks)
+    stats_dict = {"mean_success": mean_success.item(),
+                  "std_success": std_successes.item(),
+                  "mean_first_success_one_block": mean_first_success_one_block.item(),
+                  "mean_first_success_two_blocks": mean_first_success_two_blocks.item(),
+                  "num_success_one_block": num_success_one_block,
+                  "num_success_two_blocks": num_success_two_blocks,}
+    
+
+    buffer_trunc=truncate_episodes(buffer_wog, indices, save_path=os.path.join(trunc_subdir, "rollouts_wog"))
+    buffer_filtered=filter_buffer_by_length(buffer_trunc, max_length=max_length,
+                                            save_path=os.path.join(filtered_subdir, "rollouts_wog"))
+    stats_dict.update({"filtered_buffer_length": len(buffer_filtered)})
+    print(f"Processed Buffer from {buffer_dir}")
+    dict_pathname=os.path.join(buffer_dir, "stats.yaml")
+    with open(dict_pathname, 'w') as f:
+        yaml.dump(stats_dict, f, default_flow_style=False, sort_keys=False)
+    print(f"Stats {stats_dict}")
+
+
+if __name__== "__main__":
+    working_dir = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem"
+    buffer_dir = os.path.join(working_dir, "checkpoints_000")
+    process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
+
+
+if False and __name__ == "__main__":
     import yaml
     paths_trunc = ["datasets/construction/bc/truncated/flip/rollouts_wog",
                     "datasets/construction/bc/truncated/flip_2/rollouts_wog",
@@ -148,11 +227,7 @@ if __name__ == "__main__":
         with open(dict_pathname, 'w') as f:
             yaml.dump(meta_dict, f, default_flow_style=False, sort_keys=False)
 
-
-
-    
-
-if True and __name__ == "__main__":
+if False and __name__ == "__main__":
     import smart_settings
     from mbrl.environments import env_from_string
     dirs = ["results/cee_us/zero_shot/2blocks/225iters/construction_flip_2/gnn_ensemble_icem",
