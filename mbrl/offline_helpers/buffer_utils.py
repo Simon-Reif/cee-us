@@ -195,7 +195,9 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
     buffer_trunc=truncate_episodes(buffer_wog, indices, save_path=os.path.join(trunc_subdir, "rollouts_wog"))
     buffer_filtered=filter_buffer_by_length(buffer_trunc, max_length=max_length,
                                             save_path=os.path.join(filtered_subdir, "rollouts_wog"))
-    stats_dict.update({"filtered_buffer_length": len(buffer_filtered)})
+    num_transitions = buffer_filtered.get_lengths_rollouts().sum()
+    stats_dict.update({"filtered_buffer_length": len(buffer_filtered),
+                       "num_transitions": num_transitions})
     print(f"Processed Buffer from {buffer_dir}")
     dict_pathname=os.path.join(buffer_dir, "stats.yaml")
     with open(dict_pathname, 'w') as f:
@@ -216,8 +218,42 @@ def sub_buffer(buffer, num_episodes, selection="random", save_path=None):
         save_buffer(new_buffer, save_path)
     return new_buffer
 
+def yaml_load(path):
+    with open(path, 'r') as f:
+        data_dict = yaml.safe_load(f)
+    return data_dict
+
+def yaml_save(data_dict, path):
+    with open(path, 'w') as f:
+        yaml.dump(data_dict, f, default_flow_style=False, sort_keys=False)
+
+def update_yaml(path, update_dict):
+    data_dict = yaml_load(path)
+    data_dict.update(update_dict)
+    yaml_save(data_dict, path)
+
 
 if __name__=="__main__":
+    freeplay_path = "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/rollouts_wog"
+    flip_path = "datasets/construction/planner/filtered/1500/flip/rollouts_wog"
+    comb_path = "datasets/construction/freeplay_plus/flip/rollouts_wog"
+
+    flip_buffer = load_buffer(flip_path)
+    
+    num_transitions = flip_buffer.get_lengths_rollouts().sum()
+    print(f"Filtered buffer contains {num_transitions} transitions.")
+    flip_dir = os.path.dirname(flip_path)
+    dict_path = os.path.join(flip_dir, "stats.yaml")
+    update_yaml(dict_path, {"num_transitions": num_transitions})
+
+    freeplay_buffer = load_buffer(freeplay_path)
+    comb_buffer = combine_buffers(freeplay_buffer, flip_buffer, save_path=comb_path)
+    print(f"Combined buffer contains {len(comb_buffer)} rollouts, saved at {comb_path}")
+
+    
+
+
+if False and __name__=="__main__":
     buffer_path = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog"
     target_path ="datasets/construction/planner/filtered/1500/flip/rollouts_wog"
     buffer = load_buffer(buffer_path)
