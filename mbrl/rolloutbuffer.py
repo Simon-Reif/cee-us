@@ -233,6 +233,17 @@ class RolloutBuffer(abc.Sequence):
     def last_n_rollouts(self, last_n=1):
         last_rollouts = self.rollouts[-last_n:]
         return RolloutBuffer(rollouts=last_rollouts)
+    
+    def first_n_rollouts(self, first_n=1):
+        first_rollouts = self.rollouts[:first_n]
+        return RolloutBuffer(rollouts=first_rollouts)
+    
+    def random_n_rollouts(self, num_rollouts=1):
+        if num_rollouts > len(self.rollouts):
+            raise ValueError(f"Requested {num_rollouts} rollouts, but only {len(self.rollouts)} available.")
+        indices = np.random.choice(len(self.rollouts), num_rollouts, replace=False)
+        random_rollouts = self.rollouts[indices]
+        return RolloutBuffer(rollouts=random_rollouts)
 
     def n_iterations(self, start_iter=0, end_iter=1):
         return self.n_rollouts(

@@ -20,6 +20,11 @@ def save_buffer(buffer, save_path):
     with open(save_path, "wb") as f:
         pickle.dump(buffer, f)
 
+def load_buffer(path):
+    with open(path, 'rb') as f:
+        buffer = pickle.load(f)
+    return buffer
+
 def filter_buffer_by_length(buffer, max_length=None, save_path=None):
     new_rollouts = [copy.deepcopy(rollout) for rollout in buffer if len(rollout) <= max_length]
     new_buffer = RolloutBuffer(rollouts=new_rollouts)
@@ -197,11 +202,35 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
         yaml.dump(stats_dict, f, default_flow_style=False, sort_keys=False)
     print(f"Stats {stats_dict}")
 
+# selection: {random, first, last}
+def sub_buffer(buffer, num_episodes, selection="random", save_path=None):
+    if selection=="random":
+        new_buffer = buffer.random_n_rollouts(num_episodes)
+    elif selection=="first":
+        new_buffer = buffer.first_n_rollouts(num_episodes)
+    elif selection=="last":
+        new_buffer = buffer.last_n_rollouts(num_episodes)
+    else:
+        raise ValueError(f"Unknown selection variant: {selection}")
+    if save_path:
+        save_buffer(new_buffer, save_path)
+    return new_buffer
 
-if __name__== "__main__":
+
+if __name__=="__main__":
+    buffer_path = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog"
+    target_path ="datasets/construction/planner/filtered/1500/flip/rollouts_wog"
+    buffer = load_buffer(buffer_path)
+    subbuffer = sub_buffer(buffer, num_episodes=1500, selection="random", save_path=target_path)
+    print(f"Saved sub buffer of {buffer_path} to {target_path}")
+    print(f"Sub buffer contains {len(subbuffer)} rollouts")
+
+
+if False and __name__== "__main__":
     working_dir = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem"
     buffer_dir = os.path.join(working_dir, "checkpoints_000")
     process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
+    
 
 
 if False and __name__ == "__main__":
