@@ -1,8 +1,8 @@
 __import__:
   - "experiments/cee_us/settings/common/bc/basic.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/bc/flip/truncated/05_02/basic"
-training_data_dir: "datasets/construction/bc/truncated/flip"
+working_dir: "results/cee_us/construction/2blocks/bc/flip/filtered_1500/05_06/1e-4"
+training_data_dir: "datasets/construction/planner/filtered/1500/flip"
 
 
 controller_params:
