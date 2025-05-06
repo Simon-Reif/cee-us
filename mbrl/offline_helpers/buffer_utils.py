@@ -228,8 +228,11 @@ def yaml_save(data_dict, path):
         yaml.dump(data_dict, f, default_flow_style=False, sort_keys=False)
 
 def update_yaml(path, update_dict):
-    data_dict = yaml_load(path)
-    data_dict.update(update_dict)
+    if os.path.exists(path):
+        data_dict = yaml_load(path)
+        data_dict.update(update_dict)
+    else:
+        data_dict = update_dict
     yaml_save(data_dict, path)
 
 
