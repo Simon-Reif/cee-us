@@ -179,9 +179,9 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
 
             stable_indices = np.nonzero(stable)[0]
             if success:
-                indices.append(len(timesteps_successes))
-            else:
                 indices.append(stable_indices[stable_T])
+            else:
+                indices.append(len(timesteps_successes))
             eps_successes.append(success)
 
             
