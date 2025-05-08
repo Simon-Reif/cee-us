@@ -134,13 +134,17 @@ def repair_dtype_bug(buffer, save_path=None):
     return new_buffer
 
 # min_successses : {1,2}
+# task: flip, throw behave the same 
+#       pp, stack specific cutoff conditions
 def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99):
+    stable_T = 5 # as in "calculate success rates"
     trunc_subdir = os.path.join(buffer_dir, 'truncated')   
     os.makedirs(trunc_subdir)
     filtered_subdir = os.path.join(buffer_dir, 'filtered')
     os.makedirs(filtered_subdir)
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
     env = env_from_string(params.env, **params["env_params"])
+
     
     with open(os.path.join(buffer_dir, "rollouts"), 'rb') as f:
         buffer_with_goals = pickle.load(f)
@@ -150,13 +154,14 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
                     pickle.dump(buffer_wog, f)
     stats_dict = {}
     eps_successes = []
-    first_successes_one_block =[]
+    first_successes_one_block = []
     first_successes_two_blocks = []
     indices=[]
     for i in range(len(buffer_with_goals)):
-        timestep_successes = env.eval_success(buffer_with_goals[i]["next_observations"])
-        vals, unique_indices = np.unique(timestep_successes, return_index=True)
+        timesteps_successes = env.eval_success(buffer_with_goals[i]["next_observations"])
+        vals, unique_indices, unique_counts = np.unique(timesteps_successes, return_index=True, return_counts=True)
         
+        # independent of tasks
         idcs_ones = vals==1
         if any(idcs_ones):
             first_succ_one_block = unique_indices[idcs_ones][0]
@@ -167,13 +172,37 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
             first_successes_two_blocks.append(first_succ_two_blocks)
         
         # TODO: change this part for other tasks than Throw&
-        if min_successes in vals:
-            timestep = unique_indices[vals==min_successes][0]
-            indices.append(timestep)
-        else:
-            indices.append(len(timestep_successes))
-        # as in "calculate success rates" function
-        eps_successes.append(timestep_successes[-1]/env.nObj)
+        if "tower" in env.case:
+            dy = np.diff(timesteps_successes)
+            stable = np.logical_and(timesteps_successes[1:]==env.num_blocks, dy==0)
+            success = np.sum(stable)>stable_T
+
+            stable_indices = np.nonzero(stable)[0]
+            if success:
+                indices.append(len(timesteps_successes))
+            else:
+                indices.append(stable_indices[stable_T])
+            eps_successes.append(success)
+
+            
+        elif env.case == 'PickAndPlace':
+            successes = timesteps_successes==min_successes
+            indices_successes = np.nonzero(successes)[0]
+            if len(indices_successes) <= stable_T:
+                indices.append(len(timesteps_successes))
+            else:
+                indices.append(indices_successes[stable_T])
+
+            eps_successes.append(vals[unique_counts>stable_T][-1]/env.nObj)
+
+        else: # Flip, Throw
+            if min_successes in vals:
+                timestep = unique_indices[vals==min_successes][0]
+                indices.append(timestep)
+            else:
+                indices.append(len(timesteps_successes))
+            # as in "calculate success rates" function
+            eps_successes.append(timesteps_successes[-1]/env.nObj)
         
     
     eps_successes = np.array(eps_successes)
@@ -236,7 +265,7 @@ def update_yaml(path, update_dict):
     yaml_save(data_dict, path)
 
 
-if __name__=="__main__":
+if False and __name__=="__main__":
     freeplay_path = "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/rollouts_wog"
     flip_path = "datasets/construction/planner/filtered/1500/flip/rollouts_wog"
     comb_path = "datasets/construction/freeplay_plus/flip/rollouts_wog"
@@ -265,10 +294,17 @@ if False and __name__=="__main__":
     print(f"Sub buffer contains {len(subbuffer)} rollouts")
 
 
-if False and __name__== "__main__":
-    working_dir = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem"
-    buffer_dir = os.path.join(working_dir, "checkpoints_000")
-    process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
+if __name__== "__main__":
+    # working_dir = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem"
+    # buffer_dir = os.path.join(working_dir, "checkpoints_000")
+    # process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
+
+    working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem"]
+    buffer_dirs = [os.path.join(dir, "checkpoints_000") for dir in working_dirs]
+    for working_dir, buffer_dir in zip(working_dirs, buffer_dirs):
+        process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
     
 
 
