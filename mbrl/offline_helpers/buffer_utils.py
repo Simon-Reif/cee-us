@@ -139,9 +139,9 @@ def repair_dtype_bug(buffer, save_path=None):
 def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99):
     stable_T = 5 # as in "calculate success rates"
     trunc_subdir = os.path.join(buffer_dir, 'truncated')   
-    os.makedirs(trunc_subdir)
+    os.makedirs(trunc_subdir, exist_ok=True)
     filtered_subdir = os.path.join(buffer_dir, 'filtered')
-    os.makedirs(filtered_subdir)
+    os.makedirs(filtered_subdir, exist_ok=True)
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
     env = env_from_string(params.env, **params["env_params"])
 
@@ -183,7 +183,6 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
             else:
                 indices.append(len(timesteps_successes))
             eps_successes.append(success)
-
             
         elif env.case == 'PickAndPlace':
             successes = timesteps_successes==min_successes
