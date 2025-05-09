@@ -2,8 +2,20 @@ __import__:
     - "experiments/defaults.yaml"
     - "experiments/cee_us/settings/common/basic.yaml"
 
-training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
-working_dir: "results/cee_us/construction/2blocks/test_norm_with_entire_buffer"
+#training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
+
+training_data_names: [cee_us_freeplay, planner_flip]
+training_data:
+  cee_us_freeplay:
+    dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
+    weight: 1.0
+    max_episodes: False
+  planner_flip:
+    dir: "datasets/construction/bc/truncated/flip"
+    weight: 1.0
+    max_episodes: 1500
+
+working_dir: "results/cee_us/construction/2blocks/test_buffer_manager"
 #load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
 continue_training: false
 num_train_steps: 3_000_000
@@ -42,7 +54,7 @@ controller_params:
   model:
     inference_batch_size: 500_000
     actor_std: 0.2
-    norm_obs: true
+    norm_obs: false
     norm_with_entire_buffer: true
     seq_length: 1
     archi:

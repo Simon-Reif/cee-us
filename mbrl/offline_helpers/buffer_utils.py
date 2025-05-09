@@ -57,21 +57,21 @@ def get_buffer_wo_goals(buffer:RolloutBuffer, env: MaskedGoalSpaceEnvironmentInt
     return RolloutBuffer(rollouts=new_rollouts)
 
 
-def load_buffer_wog(params):
-    wog_path=os.path.join(params.training_data_dir,'rollouts_wog')
+def load_buffer_wog(params, dir=None):
+    if dir is not None:
+        dir = dir
+    else:
+        dir = params.training_data_dir
+    wog_path=os.path.join(dir,'rollouts_wog')
     if os.path.exists(wog_path):
-        print("Loading existing buffer without goals")
-        with open(os.path.join(params.training_data_dir, 'rollouts_wog'), 'rb') as f:
-            buffer = pickle.load(f)
+        #print("Loading existing buffer without goals")
+        buffer = load_buffer(wog_path)
     else:
         print("Extracting observations without goals and saving buffer")
-        with open(os.path.join(params.training_data_dir, 'rollouts'), 'rb') as f:
-            raw_buffer = pickle.load(f)
-        #TODO: pick out obs without goals, save
+        raw_buffer = load_buffer(os.path.join(dir, 'rollouts'))
         env = env_from_string(params.env, **params.env_params)
         buffer = get_buffer_wo_goals(raw_buffer, env)
-        with open(wog_path, "wb") as f:
-                    pickle.dump(buffer, f)
+        save_buffer(buffer, wog_path)
     return buffer
     
 

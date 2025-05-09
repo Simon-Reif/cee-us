@@ -7,6 +7,7 @@ from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments import env_from_string
 from mbrl.helpers import gen_rollouts
+from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
 
@@ -18,7 +19,7 @@ def calculate_success_rates(env, buffer: RolloutBuffer):
         stable_T = 5
         if env.name == "FetchPickAndPlaceConstruction" and "tower" in env.case:
             # Stack is only successful if we have a full tower! 
-            # Check if the tower is stable for at least 5 timesteps
+            # Check if the tower is stable for at least 5 timesteps ##comment: at least 7 time steps actually
             dy = np.diff(rollout_success)
             success = np.logical_and(rollout_success[1:]==env.num_blocks, dy==0)
             success_rate.append(np.sum(success)>stable_T)
@@ -34,7 +35,7 @@ def calculate_success_rates(env, buffer: RolloutBuffer):
     #print("Success rate over {} rollouts in task {}, is {}".format(len(buffer), env.case, np.asarray(success_rate).mean()))#
     return np.array(success_rate)
 
-def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, params, t=None, debug=False):
+def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, debug=False):
     eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
     """"
     num_eval_episodes: 10
@@ -44,8 +45,11 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
     # TODO: maybe inference_batch_size parameter necessary
     if t is not None:
         print(f"Evaluation at iteration {t}")
-    obs, actions, next_obs = torch_helpers.to_tensor_device(*offline_data.get_random_transitions(params.eval.num_inference_samples))
-    # TODO: set goals in observations according to task; maybe put calculate_Bs into task loop
+
+    inference_samples = offline_data.sample(params.eval.num_inference_samples)
+    next_obs = torch_helpers.to_tensor(inference_samples["next_observations"]).to(torch_helpers.device)
+    #obs, actions, next_obs = torch_helpers.to_tensor_device(*offline_data.get_random_transitions(params.eval.num_inference_samples))
+
     bs=controller.calculate_Bs(next_obs)
     success_rates_eps_dict={}
     success_rates_dict={}
@@ -63,6 +67,7 @@ def eval(controller: ForwardBackwardController, offline_data: RolloutBuffer, par
         #TODO: set goals for obs from buffer
         goals = [env._sample_goal().copy() for _ in range(params.eval.num_inference_goals)]
         goals = np.array(goals).repeat(len(next_obs)/len(goals), axis=0)
+        #this only uses observations in calculating rewards since bs fixed between tasks
         z_r = controller.estimate_z_r(next_obs, goals, env, bs=bs)
         controller.set_zr(z_r)
         if debug:

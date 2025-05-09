@@ -13,14 +13,13 @@ import yaml
 from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments import env_from_string
-from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals
+from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import eval, print_best_success_by_task, update_best_success_by_task
 
 
-#TODO: option to continue training from a checkpoint
 def main(params):
     logger = allogger.get_logger(scope="main", basic_logging_params={"level": logging.INFO})
     Seeding.set_seed(params.seed if "seed" in params else None)
@@ -29,36 +28,22 @@ def main(params):
     params_copy["seed"] = Seeding.SEED
     
     #using params copy to use existing code defined on params with different tasks etc
-    
-    #TODO: for now assume we load buffer with goals in obs
-    #TODO: later save buffer without goals
 
-    wog_path=os.path.join(params.training_data_dir,'rollouts_wog')
-    if os.path.exists(wog_path):
-        print("Loading existing buffer without goals")
-        with open(os.path.join(params.training_data_dir, 'rollouts_wog'), 'rb') as f:
-            buffer = pickle.load(f)
-    else:
-        print("Extracting observations without goals and saving buffer")
-        with open(os.path.join(params.training_data_dir, 'rollouts'), 'rb') as f:
-            raw_buffer = pickle.load(f)
-        #TODO: pick out obs without goals, save
-        env = env_from_string(params.env, **params.env_params)
-        buffer = get_buffer_wo_goals(raw_buffer, env)
-        with open(wog_path, "wb") as f:
-                    pickle.dump(buffer, f)
-    buffer_meta_path=os.path.join(params.training_data_dir, 'rollouts_meta.npy')
-    if os.path.exists(buffer_meta_path):
-        stats_dict = np.load(buffer_meta_path, allow_pickle=True).item()
-        obs_mean, obs_std = stats_dict["mean"], stats_dict["std"]
-    else:
-        obs_mean, obs_std = buffer.get_mean_std()
-        stats_dict={"mean": obs_mean, "std": obs_std}
-        np.save(buffer_meta_path, stats_dict)
+    buffer_manager = BufferManager(params_copy)
+
+    # buffer = load_buffer_wog(params_copy)
+    # buffer_meta_path=os.path.join(params.training_data_dir, 'rollouts_meta.npy')
+    # if os.path.exists(buffer_meta_path):
+    #     stats_dict = np.load(buffer_meta_path, allow_pickle=True).item()
+    #     obs_mean, obs_std = stats_dict["mean"], stats_dict["std"]
+    # else:
+    #     obs_mean, obs_std = buffer.get_mean_std()
+    #     stats_dict={"mean": obs_mean, "std": obs_std}
+    #     np.save(buffer_meta_path, stats_dict)
 
 
-    obs_dim=buffer[0]["observations"].shape[-1]
-    action_dim=buffer[0]["actions"].shape[-1]
+    obs_dim = buffer_manager.get_obs_dim()
+    action_dim = buffer_manager.get_action_dim()
     params_copy.controller_params.model.obs_dim = obs_dim
     params_copy.controller_params.model.action_dim = action_dim
 
@@ -75,7 +60,9 @@ def main(params):
         fb_controller = ForwardBackwardController(params_copy.controller_params)
 
     #for normalization during interaction with env
-    fb_controller.set_data_stats(obs_mean, obs_std)
+    if params_copy.controller_params.model.norm_obs:
+        obs_mean, obs_std = buffer_manager.get_mean_std()
+        fb_controller.set_data_stats(obs_mean, obs_std)
     
     save_settings_to_json(params_copy, params.working_dir)
 
@@ -88,7 +75,7 @@ def main(params):
     for iteration in tqdm(range(start_iter+1, start_iter+1+params.num_train_steps)):
     #for iteration in tqdm(range(10)):
 
-        metrics = fb_controller.update(buffer, iteration)
+        metrics = fb_controller.update(buffer_manager, iteration)
 
         if debug or (iteration % params.log_every_updates == 0):
             for k, v, in metrics.items():
@@ -102,7 +89,7 @@ def main(params):
             params_copy["number_of_rollouts"] = 2
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
-            success_rates_eps, success_rates, z_r_dict, bs = eval(fb_controller, buffer, params_copy, iteration)
+            success_rates_eps, success_rates, z_r_dict, bs = eval(fb_controller, buffer_manager, params_copy, iteration)
             # TODO: move this into eval
             updated = update_best_success_by_task(best_success_by_task, success_rates, iteration, debug)
             if updated:
