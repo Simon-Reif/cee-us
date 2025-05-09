@@ -44,6 +44,17 @@ class BufferManager:
         batches = [self.buffers[val].sample(count)  for val, count in zip(vals, counts)]
         batch = np.concatenate(batches)
         return batch
+    
+    def sample_start_states(self, num_samples):
+        selection = np.random.choice(len(self.buffers), size=num_samples, p=self.probs)
+        vals, counts = np.unique(selection, return_counts=True)
+        if self.debug:
+            print("Sampling Start States:")
+            print(f"Vals: {vals}, Counts: {counts}")
+        start_states = [self.buffers[val].sample_start_states(count)  for val, count in zip(vals, counts)]
+        start_states = np.concatenate(start_states)
+        return start_states
+
         
 
     def get_obs_dim(self):

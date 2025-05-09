@@ -12,4 +12,4 @@ controller_params:
     norm_obs: true
 
 eval:
-  start_states_from_train_data: true
+  start_states_from_train_data: false

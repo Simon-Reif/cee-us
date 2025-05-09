@@ -1,0 +1,16 @@
+__import__:
+  - "experiments/cee_us/settings/common/bc/filt/common.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/bc/test/filt/flip"
+
+
+debug: true
+logging:
+  project: "test"
+
+training_data_names: [planner_flip]
+training_data:
+  planner_flip:
+      dir: "datasets/construction/bc/truncated/flip"
+  
+

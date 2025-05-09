@@ -8,6 +8,7 @@ from torch import nn
 from mbrl import torch_helpers
 from mbrl.models.fb_nn import eval_mode, weight_init
 from mbrl.models.baseline_models import BCModel
+from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.rolloutbuffer import RolloutBuffer
 
 
@@ -37,7 +38,7 @@ class BehaviorCloningController():
             weight_decay=self.params.train.weight_decay,
         )
 
-    def update(self, replay_buffer: RolloutBuffer, step: int) -> Dict[str, torch.Tensor]:
+    def update(self, replay_buffer: BufferManager, step: int) -> Dict[str, torch.Tensor]:
         batch = replay_buffer.sample(self.params.train.batch_size)
 
         obs, action = (
