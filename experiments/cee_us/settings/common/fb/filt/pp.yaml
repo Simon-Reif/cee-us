@@ -19,6 +19,5 @@ controller_params:
     norm_obs: false
     archi:
       z_dim: 100
-    
   train:
     discount: 0.90

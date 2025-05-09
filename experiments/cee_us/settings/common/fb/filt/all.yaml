@@ -29,7 +29,7 @@ training_data:
 
 controller_params:
   model:
-    norm_obs: true
+    norm_obs: false
     archi:
       z_dim: 100
   train:
