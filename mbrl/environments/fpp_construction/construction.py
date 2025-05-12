@@ -138,6 +138,11 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             for i in range(self.num_blocks)
         ]
 
+    def compute_reward_from_obs_wg(self, observation):
+        goal = self.goal_from_observation(observation)
+        achieved_goal = self.achieved_goal_from_observation(observation)
+        return self.compute_reward({"desired_goal": goal, "achieved_goal": achieved_goal})
+
     def compute_reward(self, obs):
         """
         Computes reward, perhaps in an off-policy way during training. Doesn't make sense to use any of the simulator state besides that provided in achieved_goal, goal.
@@ -585,11 +590,15 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             for _ in range(self.num_blocks):
                 goals.append(np.array([np.pi / 2, 0.0, 0.0]))
         elif case == "Reach":
-            if hasattr(self, "fixed_goal") and self.fixed_goal is not None:
-                goal = self.initial_gripper_xpos[:3] + np.asarray(self.fixed_goal)
-            else:
-                goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
-            goals.append(goal.copy())
+            print("Sample Reach goal")
+            for _ in range(self.num_blocks):
+                goals.append(np.zeros(3))
+            # from .robotics FetchReach
+            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
+            goals.append(goal)
+            # return here since all other tasks zero gripper pos out
+            print(f"Sampled goal: {goals}")
+            return np.concatenate(goals, axis=0).copy()
         else:
             raise NotImplementedError
 

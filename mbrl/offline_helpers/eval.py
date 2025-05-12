@@ -65,10 +65,15 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         params.rollout_params.obs_wo_goals = True
         rollout_man = RolloutManager(env, params.rollout_params)
         #TODO: set goals for obs from buffer
-        goals = [env._sample_goal().copy() for _ in range(params.eval.num_inference_goals)]
-        goals = np.array(goals).repeat(len(next_obs)/len(goals), axis=0)
+        #TODO: set just one goal, use that goal in the env
+        goal = env._sample_goal()
+        env.set_fixed_goal(goal)
+        
+        # goals = [env._sample_goal().copy() for _ in range(params.eval.num_inference_goals)]
+        # goals = np.array(goals).repeat(len(next_obs)/len(goals), axis=0)
+        
         #this only uses observations in calculating rewards since bs fixed between tasks
-        z_r = controller.estimate_z_r(next_obs, goals, env, bs=bs)
+        z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
         controller.set_zr(z_r)
         if debug:
             print(f"Calculated zr: {z_r}")

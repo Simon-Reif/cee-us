@@ -49,7 +49,7 @@ class FetchPickAndPlaceConstruction(
         else:
             # agent_dim = 10, per_object_dim = 12 (First three elements of each object contain the locations!)
             achieved_goal_idx = [np.arange(10 + i * 12, 10 + i * 12 + 3) for i in range(self.num_blocks)]
-        achieved_goal_idx.append([0, 1, 2])
+        achieved_goal_idx.append([0, 1, 2]) #gripper pos
         achieved_goal_idx = np.asarray(achieved_goal_idx).flatten()
 
         self.goal_idx = goal_idx
@@ -57,7 +57,7 @@ class FetchPickAndPlaceConstruction(
 
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(orig_obs_len + goal_space_size,), dtype="float32")
         self.observation_space_size_preproc = self.obs_preproc(self.flatten_observation(self._get_obs())).shape[0]
-        self.goal_space_size = goal_space_size  # Should we equal to num_objects * 3 + 3 for the gripper pos!
+        self.goal_space_size = goal_space_size  # Should be equal to num_objects * 3 + 3 for the gripper pos!
 
         if "tower" in self.case or self.case == "Pyramid":
             self.threshold = 0.02
@@ -198,12 +198,20 @@ class FetchPickAndPlaceConstruction(
             raise ("Obs_type not recognized")
         return self.flatten_observation(obs), reward, done, info
 
+    def set_fixed_goal(self, goal):
+        self.fixed_goal = goal.copy()
+        self.goal = goal.copy()
+
     def reset(self):
         # Attempt to reset the simulator.
         did_reset_sim = False
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()
-        self.goal = self._sample_goal().copy()
+        if hasattr(self, "fixed_goal") and self.fixed_goal is not None:
+            self.goal = self.fixed_goal.copy()
+            # print(f"Reset with Fixed goal: {self.goal}")
+        else:
+            self.goal = self._sample_goal().copy()
         obs = self._get_obs()
         return self.flatten_observation(obs)
 
@@ -617,10 +625,10 @@ class FetchPickAndPlaceConstruction(
         return state_dict
 
     # to interface "compute_reward" function to calculate z_rs
-    def compute_rewards_goal(self, observations, goals):
+    def compute_rewards_goal(self, observations, goal):
         achieved_goal = self.achieved_goal_from_observation(observations)
         rewards = []
-        for i in range(len(goals)):
-            obs = {"achieved_goal": achieved_goal[i], "desired_goal": goals[i]}
+        for i in range(len(achieved_goal)):
+            obs = {"achieved_goal": achieved_goal[i], "desired_goal": goal}
             rewards.append(self.compute_reward(obs))
         return np.array(rewards)

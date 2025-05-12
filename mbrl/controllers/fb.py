@@ -13,6 +13,7 @@ from mbrl.base_types import Env
 from mbrl.controllers.abstract_controller import TrainableController, Controller
 from mbrl.models.fb_model import FBModel
 from mbrl.models.fb_nn import _soft_update_params, eval_mode, weight_init
+from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl import allogger, torch_helpers
 
@@ -108,8 +109,8 @@ class ForwardBackwardController():
         return z
 
 
-    def update(self, replay_buffer: RolloutBuffer, step: int) -> Dict[str, torch.Tensor]:
-        batch = replay_buffer.sample(self.params.train.batch_size)
+    def update(self, buffer_manager: BufferManager, step: int) -> Dict[str, torch.Tensor]:
+        batch = buffer_manager.sample(self.params.train.batch_size)
 
         obs, action, next_obs, terminated = (
             batch["observations"],
@@ -331,11 +332,12 @@ class ForwardBackwardController():
         
 
     @torch.no_grad()
-    def estimate_z_r(self, next_obs, goals, env: Env, bs=None, wr=True):
+    def estimate_z_r(self, next_obs, goal, env: Env, bs=None, wr=True):
         if bs is None:
             next_obs = self.maybe_normalize_obs(next_obs)
             bs = self.calculate_Bs(next_obs)
-        rewards = env.compute_rewards_goal(torch_helpers.to_numpy(next_obs), goals)
+        #print(f"Goals for inference: {goal} type: {type(goal)}")
+        rewards = env.compute_rewards_goal(torch_helpers.to_numpy(next_obs), goal)
         rewards = torch_helpers.to_tensor(rewards).to(torch_helpers.device)
         #rewards = -env.cost_fn(obs, actions, next_obs).to(torch_helpers.device)
         if wr:

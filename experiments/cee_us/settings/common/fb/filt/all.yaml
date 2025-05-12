@@ -1,13 +1,13 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_09/zdim100_fixed"
+working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_12/fixed_goals"
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
 training_data:
   cee_us_freeplay:
     dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
-    weight: 1.0
+    weight: 4.0
     max_episodes: False
   planner_flip:
     dir: "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered"

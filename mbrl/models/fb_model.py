@@ -21,6 +21,7 @@ class FBModel(nn.Module):
         self._forward_map = build_forward(self.obs_dim, arch.z_dim, self.action_dim, arch.f)
         self._actor = build_actor(self.obs_dim, arch.z_dim, self.action_dim, arch.actor)
         self._obs_normalizer = nn.BatchNorm1d(self.obs_dim, affine=False, momentum=0.01) if self.params.norm_obs else nn.Identity()
+
         # make sure the model is in eval mode and never computes gradients
         self.train(False)
         self.requires_grad_(False)
