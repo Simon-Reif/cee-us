@@ -1,0 +1,19 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+working_dir: "results/cee_us/construction/2blocks/fp_only/05_12/fixed_goals"
+
+training_data_names: [cee_us_freeplay]
+training_data:
+  cee_us_freeplay:
+    dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
+    weight: 1.0
+    max_episodes: False
+  
+controller_params:
+  model:
+    norm_obs: false
+    archi:
+      z_dim: 100
+  train:
+    discount: 0.90
