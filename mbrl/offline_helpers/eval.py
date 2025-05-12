@@ -6,13 +6,14 @@ from copy import deepcopy
 from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments import env_from_string
+from mbrl.environments.fpp_construction_env import FetchPickAndPlaceConstruction
 from mbrl.helpers import gen_rollouts
 from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
 
 # returns success rates for all rollouts, so we can compare to individual rollouts, calcuate std, etc
-def calculate_success_rates(env, buffer: RolloutBuffer):
+def calculate_success_rates(env: FetchPickAndPlaceConstruction, buffer: RolloutBuffer):
     success_rate = []
     for i in range(len(buffer)):
         rollout_success = env.eval_success(buffer[i]["next_observations"])
@@ -29,6 +30,9 @@ def calculate_success_rates(env, buffer: RolloutBuffer):
             # u: unique values, c: counts
             count_of_highest_success = c[np.argmax(u)]    
             success_rate.append(u[c>stable_T][-1]/env.nObj)
+        elif env.name == "FetchPickAndPlaceConstruction" and env.case == 'Reach':
+            # maybe replace this with success anywhere or for a while?
+            success_rate.append(rollout_success[-1])
         else:
             # For flip, throw and Playground env push tasks: just get success at the end of rollout
             success_rate.append(rollout_success[-1]/env.nObj)

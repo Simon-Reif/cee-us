@@ -137,6 +137,12 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             np.linalg.norm(goal_a[..., i * 3 : (i + 1) * 3] - goal_b[..., i * 3 : (i + 1) * 3], axis=-1)
             for i in range(self.num_blocks)
         ]
+    
+    #returns single array of size batchsize in contrast to subgoal_distances
+    def gripper_goal_distances(self, goal_a, goal_b):
+        assert goal_a.shape == goal_b.shape
+        # the last three indices of "desired goal" and "achieved goal" are the gripper position
+        return np.linalg.norm(goal_a[..., -3:] - goal_b[..., -3:], axis=-1)
 
     def compute_reward_from_obs_wg(self, observation):
         goal = self.goal_from_observation(observation)
@@ -152,6 +158,14 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         """
         achieved_goal = obs["achieved_goal"]
         goal = obs["desired_goal"]
+        if self.case == "Reach":
+            gripper_distances = self.gripper_goal_distances(achieved_goal, goal)
+            if self.reward_type == "dense":
+                rewards = -gripper_distances
+                return rewards
+            else:
+                raise NotImplementedError(f"Reward type {self.reward_type} not defined for {self.case} case.")
+
         subgoal_distances = self.subgoal_distances(achieved_goal, goal)
         if self.reward_type == "incremental":
             # Using incremental reward for each block in correct position
@@ -260,7 +274,13 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def _render_callback(self):
         if self.visualize_target:
             # Visualize target.
-            if self.viewer is not None and self.case == "Slide":
+            if self.case == "Reach":
+                # TODO: hacky, not sure whether this is correct
+                sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
+                site_id = self.sim.model.site_name2id("target{}".format(1))
+                self.sim.model.site_pos[site_id] = self.goal[-3:] - sites_offset[1]
+
+            elif self.viewer is not None and self.case == "Slide":
                 for i in range(self.num_blocks):
                     goal_pos = self.goal[i * 3 : (i + 1) * 3].copy()
                     self.viewer.add_marker(
@@ -590,14 +610,13 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             for _ in range(self.num_blocks):
                 goals.append(np.array([np.pi / 2, 0.0, 0.0]))
         elif case == "Reach":
-            print("Sample Reach goal")
             for _ in range(self.num_blocks):
                 goals.append(np.zeros(3))
             # from .robotics FetchReach
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
+            goal = self.initial_gripper_xpos[:3] + np.random.uniform(-0.15, 0.15, size=3)
             goals.append(goal)
             # return here since all other tasks zero gripper pos out
-            print(f"Sampled goal: {goals}")
+            #print(f"Sampled goal: {goals}")
             return np.concatenate(goals, axis=0).copy()
         else:
             raise NotImplementedError
@@ -608,6 +627,14 @@ class FetchBlockConstructionEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def _is_success(self, obs):
         achieved_goal = obs["achieved_goal"]
         desired_goal = obs["desired_goal"]
+        if self.case == "Reach":
+            # just mirrored their code below even though it looks odd
+            gripper_distances = self.gripper_goal_distances(achieved_goal, desired_goal)
+            if np.sum(-(gripper_distances > self.distance_threshold).astype(np.float32)) == 0:
+                return True
+            else:
+                return False
+            
         subgoal_distances = self.subgoal_distances(achieved_goal, desired_goal)
         if np.sum([-(d > self.distance_threshold).astype(np.float32) for d in subgoal_distances]) == 0:
             return True

@@ -49,7 +49,7 @@ class FetchPickAndPlaceConstruction(
         else:
             # agent_dim = 10, per_object_dim = 12 (First three elements of each object contain the locations!)
             achieved_goal_idx = [np.arange(10 + i * 12, 10 + i * 12 + 3) for i in range(self.num_blocks)]
-        achieved_goal_idx.append([0, 1, 2]) #gripper pos
+        achieved_goal_idx.append([0, 1, 2]) #gripper pos is first in observation and last in desired/achieved goal
         achieved_goal_idx = np.asarray(achieved_goal_idx).flatten()
 
         self.goal_idx = goal_idx
@@ -414,6 +414,7 @@ class FetchPickAndPlaceConstruction(
             manipulability_radius_per_obj = np.stack(obj_r)  # num_blocks x batch_size x horizon....
             return np.sum(manipulability_radius_per_obj > self.manipulability_r, axis=0)
 
+    # not used anywhere, so I don't change this for "Reach"
     def cost_fn(self, observation, action, next_obs):
         """
         In case of controller observations have shape: num_samples x (nE) x horizon x obs_dim
@@ -524,18 +525,29 @@ class FetchPickAndPlaceConstruction(
         return cost
 
     def _is_success(self, obs):
+        if self.case == "Reach":
+            return self.eval_success(obs)
         success_of_blocks = self.eval_success(obs)
         is_success = success_of_blocks == self.num_blocks
         return is_success
 
+    # returns number of objects with success
+    # or 1 if Reach task successful for single observation
     def eval_success(self, observation):
         if torch.is_tensor(observation):
             assert len(observation.shape) < 3
 
             goal = self.goal_from_observation_tensor(observation)
             achieved_goal = self.achieved_goal_from_observation_tensor(observation)
+            if self.case == "Reach":
+                gripper_distances = self.gripper_goal_distances(achieved_goal, goal)
+                solved = torch.as_tensor(
+                    gripper_distances < self.threshold, dtype=torch.float32
+                )
+                solved = torch_helpers.to_numpy(solved)
+                return solved
 
-            if self.case != "Flip" and self.case != "Slide":
+            elif self.case != "Flip" and self.case != "Slide":
                 subgoal_distances = self.subgoal_distances(achieved_goal, goal)  # List (len num_blocks) of tensors
                 costs_per_object = torch.stack(subgoal_distances)  # num_blocks x batch_size x horizon....
                 # evaluation threshold for Pick&Place set to be same as in the original construction environment!
@@ -560,8 +572,15 @@ class FetchPickAndPlaceConstruction(
         else:
             goal = self.goal_from_observation(observation)
             achieved_goal = self.achieved_goal_from_observation(observation)
-
-            if self.case != "Flip" and self.case != "Slide":
+            
+            if self.case == "Reach":
+                gripper_distances = self.gripper_goal_distances(achieved_goal, goal)
+                solved = np.asarray(
+                    gripper_distances < self.threshold, dtype=np.float32
+                )
+                return solved
+            
+            elif self.case != "Flip" and self.case != "Slide":
                 subgoal_distances = self.subgoal_distances(achieved_goal, goal)  # List (len num_blocks) of np arrays
                 costs_per_object = np.stack(subgoal_distances)
                 # evaluation threshold for Pick&Place set to be same as in the original construction environment!

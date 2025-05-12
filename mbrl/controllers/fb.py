@@ -9,13 +9,11 @@ import torch
 import torch.nn.functional as F
 from abc import ABC, abstractmethod
 
-from mbrl.base_types import Env
-from mbrl.controllers.abstract_controller import TrainableController, Controller
+from mbrl.environments.fpp_construction_env import FetchPickAndPlaceConstruction
 from mbrl.models.fb_model import FBModel
 from mbrl.models.fb_nn import _soft_update_params, eval_mode, weight_init
 from mbrl.offline_helpers.buffer_manager import BufferManager
-from mbrl.rolloutbuffer import RolloutBuffer
-from mbrl import allogger, torch_helpers
+from mbrl import torch_helpers
 
 
 # no longer inherits from "Controller" or "TrainableController" since inherent cost_fn, train() method 
@@ -332,7 +330,7 @@ class ForwardBackwardController():
         
 
     @torch.no_grad()
-    def estimate_z_r(self, next_obs, goal, env: Env, bs=None, wr=True):
+    def estimate_z_r(self, next_obs, goal, env: FetchPickAndPlaceConstruction, bs=None, wr=True):
         if bs is None:
             next_obs = self.maybe_normalize_obs(next_obs)
             bs = self.calculate_Bs(next_obs)
