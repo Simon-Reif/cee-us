@@ -1,7 +1,7 @@
 __import__:
-    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+    - "experiments/cee_us/settings/common/fb/filt/filt_common.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_throw/05_12/fixed_goals_disc95"
+working_dir: "results/cee_us/construction/2blocks/fp_plus_throw/05_13/zdim50"
 
 training_data_names: [cee_us_freeplay, planner_throw]
 training_data:
@@ -14,10 +14,3 @@ training_data:
     weight: 1.0
     max_episodes: 1500
 
-controller_params:
-  model:
-    norm_obs: false
-    archi:
-      z_dim: 100
-  train:
-    discount: 0.95
