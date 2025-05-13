@@ -115,6 +115,7 @@ class RolloutManager:
             and (self.parallel_training or mode == "evaluate")
         )
 
+    # "start_ob/state" are lists of length no_rollouts
     def sample(
         self,
         policy: Controller,
@@ -145,6 +146,7 @@ class RolloutManager:
             for i in (
                 tqdm_context(range(no_rollouts), desc=desc, postfix_dict=stat_dict) if use_tqdm else range(no_rollouts)
             ):
+                #print(f"start_states: {temp_start_state}")
                 rollouts.append(
                     self.sample_env(
                         policy,

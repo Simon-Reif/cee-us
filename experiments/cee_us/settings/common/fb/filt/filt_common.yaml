@@ -28,8 +28,8 @@ training_data:
 
 controller_params:
   model:
-    norm_obs: false
+    norm_obs: true
     archi:
-      z_dim: 50
+      z_dim: 100
   train:
     discount: 0.90

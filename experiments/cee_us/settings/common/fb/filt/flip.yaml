@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/filt/filt_common.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_flip/05_13/zdim50"
+working_dir: "results/cee_us/construction/2blocks/fp_plus_flip/05_13/norm_obs"
 
 training_data_names: [cee_us_freeplay, planner_flip]
 training_data:
