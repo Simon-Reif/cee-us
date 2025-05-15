@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_14/common"
+working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_15/lr-5"
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
 training_data:
@@ -33,4 +33,7 @@ controller_params:
       z_dim: 50
   train:
     discount: 0.90
-    fb_pessimism_penalty: 0.5
+    lr_f: 1.0e-5
+    lr_actor: 1.0e-5
+    lr_b: 1.0e-5
+    fb_pessimism_penalty: 0.0
