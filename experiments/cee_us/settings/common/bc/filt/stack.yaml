@@ -6,4 +6,4 @@ working_dir: "results/cee_us/construction/2blocks/bc/stack/filtered_1500/05_16/w
 training_data_names: [planner_stack_wg]
 
 eval:
-  eval_tasks: ["Stack"]
+  eval_tasks: ["Singletower"]
