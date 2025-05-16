@@ -56,6 +56,27 @@ def get_buffer_wo_goals(buffer:RolloutBuffer, env: MaskedGoalSpaceEnvironmentInt
         new_rollouts.append(new_rollout)
     return RolloutBuffer(rollouts=new_rollouts)
 
+def add_goals_to_buffer(buffer:RolloutBuffer, env: MaskedGoalSpaceEnvironmentInterface):
+    rollouts = buffer.rollouts
+    field_names = buffer[0].field_names()
+    new_rollouts = []
+    for rollout in rollouts:
+        new_dict = {field_name: copy.deepcopy(rollout[field_name]) for field_name in field_names}
+        goal = env.goal_from_state(rollout["env_states"][0])
+        new_dict["observations"] = env.append_goal_to_observation(rollout["observations"], goal)
+        new_dict["next_observations"] = env.append_goal_to_observation(rollout["next_observations"], goal)
+        new_rollout = Rollout.from_dict(**new_dict)
+        new_rollouts.append(new_rollout)
+    return RolloutBuffer(rollouts=new_rollouts)
+
+def load_buffer_with_goals(params, dir=None):
+    if dir is not None:
+        dir = dir
+    else:
+        dir = params.training_data_dir
+    buffer = load_buffer(os.path.join(dir, 'rollouts'))
+    return buffer
+
 
 def load_buffer_wog(params, dir=None):
     if dir is not None:
@@ -203,7 +224,6 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
             # as in "calculate success rates" function
             eps_successes.append(timesteps_successes[-1]/env.nObj)
         
-    
     eps_successes = np.array(eps_successes)
     mean_success, std_successes = eps_successes.mean(), eps_successes.std()
     first_successes_one_block = np.array(first_successes_one_block)
@@ -263,6 +283,21 @@ def update_yaml(path, update_dict):
         data_dict = update_dict
     yaml_save(data_dict, path)
 
+# add "rollouts" (with goals) to truncated and filtered buffer dirs 
+if __name__=="__main__":
+    working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem"]
+    for working_dir in working_dirs:
+        params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
+        env = env_from_string(params.env, **params["env_params"])
+        filt_dir = os.path.join(working_dir, "checkpoints_000", "filtered")
+        buffer_wog = load_buffer(os.path.join(filt_dir, "rollouts_wog"))
+        buffer_with_goals = add_goals_to_buffer(buffer_wog, env)
+        save_buffer(buffer_with_goals, os.path.join(filt_dir, "rollouts"))
+        
+    
 
 if False and __name__=="__main__":
     freeplay_path = "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/rollouts_wog"
@@ -281,7 +316,7 @@ if False and __name__=="__main__":
     comb_buffer = combine_buffers(freeplay_buffer, flip_buffer, save_path=comb_path)
     print(f"Combined buffer contains {len(comb_buffer)} rollouts, saved at {comb_path}")
 
-    
+
 
 
 if False and __name__=="__main__":
@@ -292,8 +327,7 @@ if False and __name__=="__main__":
     print(f"Saved sub buffer of {buffer_path} to {target_path}")
     print(f"Sub buffer contains {len(subbuffer)} rollouts")
 
-
-if __name__== "__main__":
+if False and __name__== "__main__":
     # working_dir = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem"
     # buffer_dir = os.path.join(working_dir, "checkpoints_000")
     # process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
