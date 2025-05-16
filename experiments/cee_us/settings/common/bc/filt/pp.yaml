@@ -1,7 +1,9 @@
 __import__:
   - "experiments/cee_us/settings/common/bc/filt/common.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/bc/pp/filtered_1500/05_09/lr-4"
+working_dir: "results/cee_us/construction/2blocks/bc/pp/filtered_1500/05_16/with_goals"
 
 training_data_names: [planner_pp_wg]
 
+eval:
+  eval_tasks: ["PickPlace"]

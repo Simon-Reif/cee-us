@@ -5,3 +5,5 @@ working_dir: "results/cee_us/construction/2blocks/bc/flip/filtered_1500/05_16/wi
 
 training_data_names: [planner_flip_wg]
 
+eval:
+  eval_tasks: ["Flip"]
