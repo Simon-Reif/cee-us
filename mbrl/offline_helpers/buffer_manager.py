@@ -27,7 +27,6 @@ class BufferManager:
             if "with_goals" in self.training_data[name] and self.training_data[name]["with_goals"]:
                 print(f"Loading buffer with goals from {dir}")
                 buffer = load_buffer_with_goals(params, dir=dir)
-                print(f"Obs_dim: {buffer[0]["observations"].shape[-1]}")
             else:
                 buffer = load_buffer_wog(params, dir=dir)
             max_eps = self.training_data[name]["max_episodes"]
