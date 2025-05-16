@@ -272,10 +272,14 @@ class FetchPickAndPlaceConstruction(
         mask = np.ones(observation.shape[-1])
         mask[self.goal_idx] = 0
         return observation[..., mask == 1]
-
+    
+    def goal_from_state(self, state):
+        goal = state[-self.goal_space_size :]
+        return goal
+    
     def append_goal_to_observation(self, observation, goal):
         _goal = np.broadcast_to(goal, (list(observation.shape[:-1]) + [goal.shape[-1]]))
-        return np.concatenate([observation, _goal], dim=-1)
+        return np.concatenate([observation, _goal], axis=-1)
 
     def goal_from_observation_tensor(self, observations):
         return torch.index_select(observations, -1, self.goal_idx_tensor)
