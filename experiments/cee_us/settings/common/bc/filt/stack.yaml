@@ -3,5 +3,5 @@ __import__:
 
 working_dir: "results/cee_us/construction/2blocks/bc/stack/filtered_1500/05_09/lr-4"
 
-training_data_names: [planner_stack]
+training_data_names: [planner_stack_wg]
 

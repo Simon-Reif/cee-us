@@ -272,7 +272,8 @@ class RolloutManager:
                 state = RolloutManager.supply_env_state(env, use_env_states)
                 try:
                     #TODO: refactor to use obs wog for various controllers
-                    if isinstance(policy, ForwardBackwardController) or isinstance(policy, BehaviorCloningController):
+                    if isinstance(policy, ForwardBackwardController):
+                    #if isinstance(policy, ForwardBackwardController) or isinstance(policy, BehaviorCloningController):
                         obs_wo_goal = env.observation_wo_goal(ob)
 
                         ac = policy.get_action(obs_wo_goal, state=state, mode=mode)

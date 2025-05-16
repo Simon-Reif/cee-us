@@ -43,6 +43,7 @@ def eval_bc(controller, params, t, train_data:BufferManager=None):
             start_states = train_data.sample_start_states(params.number_of_rollouts)
         else:
             start_states = None
+        # setting start_states also sets goals!
         rollout_buffer = gen_rollouts(
             params,
             rollout_man,
@@ -92,12 +93,15 @@ def main(params):
     # obs_dim=buffer[0]["observations"].shape[-1]
     # action_dim=buffer[0]["actions"].shape[-1]
 
+    # TODO: instead define on observations with goals
     obs_dim=buffer_manager.get_obs_dim()
     action_dim=buffer_manager.get_action_dim()
     params_copy.controller_params.model.obs_dim = obs_dim
     params_copy.controller_params.model.action_dim = action_dim
 
     debug=params.debug
+    if debug:
+        print(f"Obs dim: {obs_dim}, Action dim {action_dim}")
     start_iter=0
     
     bc_controller = BehaviorCloningController(params_copy.controller_params)
