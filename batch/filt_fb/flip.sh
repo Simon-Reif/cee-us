@@ -12,7 +12,7 @@
 #SBATCH --mem=50G                  # Total memory pool for all cores (see also --mem-per-cpu); exceeding this number will cause your job to fail.
 #SBATCH --output=/mnt/lustre/work/martius/mot363/cee-us/slurm-outputs/%x-%j.out       # File to which STDOUT will be written - make sure this is not on $HOME
 #SBATCH --error=/mnt/lustre/work/martius/mot363/cee-us/slurm-outputs/%x-%j.err        # File to which STDERR will be written - make sure this is not on $HOME
-#SBATCH --mail-type=END            # Type of email notification- BEGIN,END,FAIL,ALL
+#SBATCH --mail-type=FAIL            # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=simonreif@t-online.de   # Email to which notifications will be sent
 
 # Diagnostic and Analysis Phase - please leave these in.
