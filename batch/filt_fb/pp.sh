@@ -2,7 +2,7 @@
 
 # Sample Slurm job script for Galvani 
 
-#SBATCH -J fb_train_filt               # Job name
+#SBATCH -J fb_pp_filt               # Job name
 #SBATCH --ntasks=1                 # Number of tasks
 #SBATCH --cpus-per-task=8          # Number of CPU cores per task
 #SBATCH --nodes=1                  # Ensure that all cores are on the same machine with nodes=1
