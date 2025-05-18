@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/filt/filt_common.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_throw/05_17/disc95_zdim25_tau-2"
+working_dir: "results/cee_us/construction/2blocks/fp_plus_throw/05_17/disc90_zdim50_tau-3"
 
 training_data_names: [cee_us_freeplay, planner_throw]
 training_data:
@@ -13,4 +13,3 @@ training_data:
     dir: "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem/checkpoints_000/filtered"
     weight: 1.0
     max_episodes: 1500
-

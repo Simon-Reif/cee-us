@@ -1,7 +1,7 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_17/disc95_zdim25_tau-2"
+working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_17/disc90_zdim50_tau-3"
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
 training_data:
@@ -30,12 +30,12 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 25
+      z_dim: 50
   train:
-    discount: 0.95
+    discount: 0.90
     ortho_coef: 1.0
     lr_f: 1.0e-4
     lr_actor: 1.0e-4
     lr_b: 1.0e-4
     fb_pessimism_penalty: 0.0
-    fb_target_tau: 1.0e-2
+    fb_target_tau: 1.0e-3
