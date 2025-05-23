@@ -119,14 +119,14 @@ def main(params):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 2:
-        params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
-        wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
+    # if len(sys.argv) >= 2:
+    #     params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
+    #     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
 
-        run = wandb.init(project=params.logging.project, entity="srtea", config=params)
-    else:
-        run = wandb.init()
-        params = recursive_objectify(run.config.as_dict(), make_immutable=False)
+    #     run = wandb.init(project=params.logging.project, entity="srtea", config=params)
+    # else:
+    run = wandb.init()
+    params = recursive_objectify(run.config.as_dict(), make_immutable=False)
     
     if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
         params.working_dir = get_working_dir(params, run)
