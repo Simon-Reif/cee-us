@@ -2,7 +2,9 @@
 import logging
 import os
 import pickle
+import sys
 import numpy as np
+from smart_settings.param_classes import recursive_objectify
 import torch
 import wandb
 from tqdm import tqdm
@@ -18,13 +20,17 @@ from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import eval, print_best_success_by_task, update_best_success_by_task
+from mbrl.workflow.name_runs_dirs import get_wandb_name, get_working_dir
 
 
 def main(params):
     logger = allogger.get_logger(scope="main", basic_logging_params={"level": logging.INFO})
     Seeding.set_seed(params.seed if "seed" in params else None)
     # update params file with seed (either given or generated above)
-    params_copy = params._mutable_copy()
+
+    #TODO: refactor this later
+    params_copy = params
+    #params_copy = params._mutable_copy()
     params_copy["seed"] = Seeding.SEED
     
     #using params copy to use existing code defined on params with different tasks etc
@@ -99,14 +105,11 @@ def main(params):
                                controller=fb_controller, z_r_dict=z_r_dict, bs=bs, loud=2 if debug else 0)
             
         
-        
-
     ###
     # End Main Loop
     ###
     save_meta(params_copy.working_dir, iteration)
     #TODO save final model
-    #TODO generate summary (plot) of best results
     #TODO maybe do sth with "total_metrics"
     print_best_success_by_task(best_success_by_task, console=True)
     allogger.close()
@@ -116,12 +119,22 @@ def main(params):
 
 
 if __name__ == "__main__":
-    params = read_params_from_cmdline(verbose=True, save_params=False)
+    params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
+    wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
+    
+    #TODO: be careful whether this is automatically overwritten in sweep
+    run = wandb.init(project=params.logging.project, entity="srtea", config=params)
+
+    # run started as part of sweep without yaml config
+    if len(sys.argv) < 2:
+        params = recursive_objectify(run.config.as_dict(), make_immutable=False)
+    
+    if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
+        params.working_dir = get_working_dir(params, run)
+    # if "set_dynamic_wandbname" in params and params.set_dynamic_wandbname:
+    #     wandb.name = get_wandb_name(params, run)
 
     os.makedirs(params.working_dir, exist_ok=True)
-
-    wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
-    wandb.init(project=params.logging.project, entity="srtea", config=params)
 
     allogger.basic_configure(
         logdir=params.working_dir,
@@ -150,3 +163,4 @@ if __name__ == "__main__":
     torch.backends.cudnn.enabled = True
 
     exit(main(params))
+    run.finish()
