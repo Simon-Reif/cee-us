@@ -2,7 +2,7 @@ __import__:
   - "experiments/cee_us/settings/common/bc/filt/common.yaml"
 
 #working_dir: "results/cee_us/construction/2blocks/bc/throw/filtered_1500/05_16/with_goals"
-train_data_tag: "throws"
+train_data_tag: "throw"
 training_data_names: [planner_throw_wg]
 
 eval:
