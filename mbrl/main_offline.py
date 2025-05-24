@@ -132,6 +132,8 @@ if __name__ == "__main__":
     if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
         #TODO: also set working_dir in wandb config
         params.working_dir = get_working_dir(params, run)
+        run.config["working_dir"] = params.working_dir
+
     # if "set_dynamic_wandbname" in params and params.set_dynamic_wandbname:
     #     wandb.name = get_wandb_name(params, run)
 

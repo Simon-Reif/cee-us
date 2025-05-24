@@ -22,6 +22,7 @@ from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import calculate_success_rates, print_best_success_by_task, update_best_success_by_task
+from mbrl.workflow.name_runs_dirs import get_working_dir
 
 
 def eval_bc(controller, params, t, train_data:BufferManager=None):
@@ -169,7 +170,13 @@ if __name__ == "__main__":
     os.makedirs(params.working_dir, exist_ok=True)
 
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
-    wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params)
+    run=wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params)
+
+    if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
+        #TODO: also set working_dir in wandb config
+        params.working_dir = get_working_dir(params, run)
+        run.config["working_dir"] = params.working_dir
+    
 
     allogger.basic_configure(
         logdir=params.working_dir,
@@ -198,3 +205,4 @@ if __name__ == "__main__":
     torch.backends.cudnn.enabled = True
 
     exit(main(params))
+    run.finish()

@@ -8,9 +8,12 @@ debug: true
 logging:
   project: "test"
 
-training_data_names: [planner_flip]
+training_data_names: [planner_flip_wg]
 training_data:
   planner_flip:
       dir: "datasets/construction/bc/truncated/flip"
-  
-
+  planner_flip_wg:
+      dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem/checkpoints_000"
+      max_episodes: False
+      weight: 1.0
+      with_goals: True
