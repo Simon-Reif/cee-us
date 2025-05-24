@@ -165,7 +165,7 @@ def main(params):
 
 
 if __name__ == "__main__":
-    params = read_params_from_cmdline(verbose=True, save_params=False)
+    params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
 
     os.makedirs(params.working_dir, exist_ok=True)
 
