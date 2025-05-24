@@ -175,9 +175,9 @@ if __name__ == "__main__":
     if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
         #TODO: also set working_dir in wandb config
         params.working_dir = get_working_dir(params, run)
-        run.config["working_dir"] = params.working_dir
-    
+        run.config.update({"working_dir": params.working_dir}, allow_val_change=True)
 
+    
     allogger.basic_configure(
         logdir=params.working_dir,
         default_outputs=["tensorboard"],
