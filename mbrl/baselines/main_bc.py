@@ -72,7 +72,10 @@ def main(params):
     logger = allogger.get_logger(scope="main", basic_logging_params={"level": logging.INFO})
     Seeding.set_seed(params.seed if "seed" in params else None)
     # update params file with seed (either given or generated above)
-    params_copy = params._mutable_copy()
+    
+    #TODO: refactor this later
+    params_copy = params
+    # params_copy = params._mutable_copy()
     params_copy["seed"] = Seeding.SEED
     
     #using params copy to use existing code defined on params with different tasks etc
@@ -167,8 +170,6 @@ def main(params):
 if __name__ == "__main__":
     params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
 
-    os.makedirs(params.working_dir, exist_ok=True)
-
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
     run=wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params, allow_val_change=True)
 
@@ -177,7 +178,8 @@ if __name__ == "__main__":
         params.working_dir = get_working_dir(params, run)
         run.config.update({"working_dir": params.working_dir}, allow_val_change=True)
 
-    
+    os.makedirs(params.working_dir, exist_ok=True)
+
     allogger.basic_configure(
         logdir=params.working_dir,
         default_outputs=["tensorboard"],
