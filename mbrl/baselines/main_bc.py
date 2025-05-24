@@ -170,7 +170,7 @@ if __name__ == "__main__":
     os.makedirs(params.working_dir, exist_ok=True)
 
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
-    run=wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params)
+    run=wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params, allow_val_change=True)
 
     if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
         #TODO: also set working_dir in wandb config

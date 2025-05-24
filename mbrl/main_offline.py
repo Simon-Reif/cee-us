@@ -124,7 +124,7 @@ if __name__ == "__main__":
     params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
 
-    run = wandb.init(project=params.logging.project, entity="srtea", config=params)
+    run = wandb.init(project=params.logging.project, entity="srtea", config=params, allow_val_change=True)
     # else:
     # run = wandb.init()
     # params = recursive_objectify(run.config.as_dict(), make_immutable=False)
