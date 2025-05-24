@@ -72,10 +72,6 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         #TODO: set just one goal, use that goal in the env
         goal = env._sample_goal()
         env.set_fixed_goal(goal)
-        
-        # goals = [env._sample_goal().copy() for _ in range(params.eval.num_inference_goals)]
-        # goals = np.array(goals).repeat(len(next_obs)/len(goals), axis=0)
-        
         #this only uses observations in calculating rewards since bs fixed between tasks
         z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
         controller.set_zr(z_r)
@@ -84,6 +80,10 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         ### Task Adaptation End
         rollout_buffer = RolloutBuffer()
         #TODO: set params.num_rollouts to eval.num_eval_episodes
+        if params.eval.start_states_from_train_data:
+            start_states = offline_data.sample_start_states(params.number_of_rollouts)
+        else:
+            start_states = None
         rollout_buffer = gen_rollouts(
             params,
             rollout_man,
@@ -93,6 +93,7 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
             None, #forward_model
             t, #iteration
             False, #do_initial_rollouts
+            start_states=start_states,
         )
         success_rates_eps = calculate_success_rates(env, rollout_buffer)
         mean_success_rate = success_rates_eps.mean()

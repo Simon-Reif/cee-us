@@ -246,7 +246,10 @@ class RolloutManager:
             else:
                 env.set_GT_state(start_state)
             ob = start_ob
+        # hacky solution to the above not working with just start_states
         else:
+            if start_state is not None:
+                env.set_GT_state(start_state)
             ob = env.reset_with_mode(mode)
 
         if hasattr(policy, 'has_state') and policy.has_state:

@@ -34,6 +34,7 @@ rollout_params:
   use_env_states: true
   logging: true
   task_horizon: 100
+initial_controller_params: "none"
 
 controller: "fb"
 controller_params:
@@ -86,6 +87,7 @@ controller_params:
 
   
 eval:
+  start_states_from_train_data: true
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr
   num_inference_samples: 50_000

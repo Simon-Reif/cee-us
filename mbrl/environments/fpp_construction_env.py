@@ -220,7 +220,8 @@ class FetchPickAndPlaceConstruction(
 
     def set_GT_state(self, state):
         mj_state = state[: -self.goal_space_size]
-        self.goal = state[-self.goal_space_size :]
+        if not hasattr(self, "fixed_goal") or self.fixed_goal is None:
+            self.goal = state[-self.goal_space_size :]
         super().set_GT_state(mj_state)
 
     def set_state_from_observation(self, observation):

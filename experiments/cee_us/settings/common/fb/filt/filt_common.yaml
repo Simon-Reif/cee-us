@@ -1,7 +1,9 @@
 __import__:
     - "experiments/cee_us/settings/common/fb/basic_config.yaml"
 
-working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_19/disc90_zdim100_qloss0.1"
+# working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_19/disc90_zdim100_qloss0.1"
+work_dir_prefix: "results/cee_us/construction/2blocks"
+
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
 training_data:
@@ -37,6 +39,6 @@ controller_params:
     lr_f: 1.0e-4
     lr_actor: 1.0e-4
     lr_b: 1.0e-4
-    q_loss_coef: 0.1
+    q_loss_coef: 0
     fb_pessimism_penalty: 0.0
     fb_target_tau: 1.0e-2
