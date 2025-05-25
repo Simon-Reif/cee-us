@@ -5,6 +5,7 @@ __import__:
 work_dir_prefix: "results/cee_us/construction/2blocks"
 
 logging:
+  set_dynamic_wandbname: true
   wandb_name_params: ["disc", "zdim"]
   data_tag_in_name: true
 
