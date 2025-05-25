@@ -137,7 +137,7 @@ if __name__ == "__main__":
         run.config.update({"working_dir": params.working_dir}, allow_val_change=True)
 
     if "set_dynamic_wandbname" in params and params.logging.set_dynamic_wandbname:
-        wandb.name = get_wandb_name(params, run)
+        run.name = get_wandb_name(params, run)
 
     os.makedirs(params.working_dir, exist_ok=True)
 
