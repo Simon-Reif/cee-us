@@ -10,21 +10,25 @@ from mbrl.controllers.fb import ForwardBackwardController
 def _get_cp_dir(working_dir, iter):
     return os.path.join(working_dir, f"checkpoint_{iter}")
 
-# success_reats: numpy array
-# controller own save method
-# z_rs, bs numpy arrays
-def save_fb_checkpoint(working_dir, iter, success_rates_dict=None, controller=None, z_r_dict=None, bs=None, 
-                       rollout_buffer_dict=None, loud=0):
+# eval_return_dict contains:
+#   "success_rates_eps"
+#   "success_rates"
+#   "z_rs"
+#   "goals"
+def save_fb_checkpoint(working_dir, iter, controller=None, eval_return_dict=None , loud=0):
     cp_dir = _get_cp_dir(working_dir, iter)
     os.makedirs(cp_dir, exist_ok=True)
-    if success_rates_dict is not None:
-        np.save(os.path.join(cp_dir, "success_rate_dict.npy"), success_rates_dict)
     if controller is not None:    
         controller.save(cp_dir)
-    if z_r_dict is not None:
-        np.save(os.path.join(cp_dir, "z_r_dict.npy"), z_r_dict)
-    if bs is not None:
-        np.save(os.path.join(cp_dir, "bs.npy"), bs)
+    if "success_rates" in eval_return_dict:
+        success_rates_dict = eval_return_dict["success_rates"]
+        np.save(os.path.join(cp_dir, "success_rate_dict.npy"), success_rates_dict)
+    if "z_rs" in eval_return_dict:
+        z_rs = eval_return_dict["z_rs"]
+        np.save(os.path.join(cp_dir, "z_r_dict.npy"), z_rs)
+    if "goals" in eval_return_dict:
+        goals = eval_return_dict["goals"]
+        np.save(os.path.join(cp_dir, "goals.npy"), goals)
     # TODO: look up how rollout buffers are saved
     # if rollout_buffer_dict is not None:
     #     np
@@ -48,6 +52,14 @@ def get_zr_dict(working_dir, iter=None):
         path = working_dir
     zrs = np.load(os.path.join(path, "z_r_dict.npy"), allow_pickle=True)
     return zrs.item()
+
+def get_goals_dict(working_dir, iter=None):
+    if iter is not None:
+        path = _get_cp_dir(working_dir, iter)
+    else:
+        path = working_dir
+    goals = np.load(os.path.join(path, "goals.npy"), allow_pickle=True)
+    return goals.item()
 
 # B(s_next) for B at iter and the offline training buffer
 def get_bs(working_dir, iter):

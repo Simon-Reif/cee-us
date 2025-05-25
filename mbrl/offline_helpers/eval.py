@@ -58,6 +58,7 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
     success_rates_eps_dict={}
     success_rates_dict={}
     z_rs={}
+    goals={}
     for task in params.eval.eval_tasks:
         task_params=params.eval_envs[task]
         ### Task Adaptation
@@ -104,8 +105,15 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         success_rates_eps_dict[task] = success_rates_eps
         success_rates_dict[task] = mean_success_rate
         z_rs[task] = torch_helpers.to_numpy(z_r)
-    bs = torch_helpers.to_numpy(bs)
-    return success_rates_eps_dict, success_rates_dict, z_rs, bs
+        goals[task] = goal
+
+    eval_return_dict = {
+        "success_rates_eps": success_rates_eps_dict,
+        "success_rates": success_rates_dict,
+        "z_rs": z_rs,
+        "goals": goals,
+    }
+    return eval_return_dict
 
 
 def update_best_success_by_task(best_success_by_task, success_rates, iteration, debug=False):

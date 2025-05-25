@@ -68,3 +68,9 @@ def make_sweep_config(sweep_config_base, params_base, hyper_param_values=None):
     #TODO: maybe later update parameters rather than overwriting
     sweep_config["parameters"]=params
     return sweep_config
+
+# get attributes in AttributeDict by string in dot notation
+def val_from_dot_string(d, keys_with_dots):
+    for key in keys_with_dots.split('.'):
+        d = d[key]
+    return d

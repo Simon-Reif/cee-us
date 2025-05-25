@@ -95,14 +95,16 @@ def main(params):
             params_copy["number_of_rollouts"] = 2
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
-            success_rates_eps, success_rates, z_r_dict, bs = eval(fb_controller, buffer_manager, params_copy, iteration)
+            #success_rates_eps, success_rates, z_r_dict, bs = eval(fb_controller, buffer_manager, params_copy, iteration)
+            eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration)
+
             # TODO: move this into eval
-            updated = update_best_success_by_task(best_success_by_task, success_rates, iteration, debug)
+            updated = update_best_success_by_task(best_success_by_task, eval_return_dict["success_rates"], iteration, debug)
             if updated:
                 print_best_success_by_task(best_success_by_task, to_yaml=True, working_dir=params.working_dir)
 
-            save_fb_checkpoint(params.working_dir, iteration, success_rates_dict=success_rates_eps, 
-                               controller=fb_controller, z_r_dict=z_r_dict, bs=bs, loud=2 if debug else 0)
+            save_fb_checkpoint(params.working_dir, iteration, eval_return_dict=eval_return_dict,
+                               controller=fb_controller, loud=2 if debug else 0)
             
         
     ###
@@ -134,8 +136,8 @@ if __name__ == "__main__":
         params.working_dir = get_working_dir(params, run)
         run.config.update({"working_dir": params.working_dir}, allow_val_change=True)
 
-    # if "set_dynamic_wandbname" in params and params.set_dynamic_wandbname:
-    #     wandb.name = get_wandb_name(params, run)
+    if "set_dynamic_wandbname" in params and params.set_dynamic_wandbname:
+        wandb.name = get_wandb_name(params, run)
 
     os.makedirs(params.working_dir, exist_ok=True)
 

@@ -1,6 +1,7 @@
 slurm-outputs
 sandbox
 wandb
+experiments/cee_us/notebooks/sweeps
 datasets/construction/fb
 figures/
 *.prof
