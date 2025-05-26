@@ -138,6 +138,7 @@ if __name__ == "__main__":
 
     if "set_dynamic_wandbname" in params and params.logging.set_dynamic_wandbname:
         run.name = get_wandb_name(params, run)
+        run.save()
 
     os.makedirs(params.working_dir, exist_ok=True)
 
