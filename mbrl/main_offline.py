@@ -16,7 +16,7 @@ from mbrl import allogger, torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 from mbrl.environments import env_from_string
 from mbrl.offline_helpers.buffer_manager import BufferManager
-from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
+from mbrl.params_utils import is_settings_file, read_params_from_cmdline, save_settings_to_json
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import eval, print_best_success_by_task, update_best_success_by_task
@@ -121,15 +121,15 @@ def main(params):
 
 
 if __name__ == "__main__":
-    #TODO: find different way to distinguish between sweep and individual run
-    #if len(sys.argv) >= 2:
-    params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
-    wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
+    #hacky check to see if executed by sweep agent
+    if is_settings_file(sys.argv[1]):
+        params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
+        wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
 
-    run = wandb.init(project=params.logging.project, entity="srtea", config=params, allow_val_change=True)
-    # else:
-    # run = wandb.init()
-    # params = recursive_objectify(run.config.as_dict(), make_immutable=False)
+        run = wandb.init(project=params.logging.project, entity="srtea", config=params, allow_val_change=True)
+    else:
+        run = wandb.init()
+        params = recursive_objectify(run.config.as_dict(), make_immutable=False)
     
     if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
         #TODO: also set working_dir in wandb config
