@@ -18,7 +18,7 @@ param_name_map = {
     "disc": ("controller_params.train.discount", lambda x: _percentage_only(x)),
     "zdim": ("controller_params.model.archi.z_dim", lambda x: f"{x}"),
     # mr for mixing ratio
-    "mr": ("controller_params.train.train_goal_ratio", lambda x: f"{x:1.2}"),
+    "mr": ("controller_params.train.train_goal_ratio", lambda x: f"{float(x):1.2}"),
     "tau": ("controller_params.train.fb_target_tau", lambda x:_only_exp(x)),
     "orth": ("controller_params.train.ortho_coef", lambda x: f"{x}"),
 
