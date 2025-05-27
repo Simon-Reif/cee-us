@@ -305,8 +305,7 @@ class ForwardBackwardController():
     # TODO: batch norm OR normalize with data mean, std?
     @torch.no_grad()
     def calculate_Bs(self, next_obs: torch.Tensor)->torch.Tensor:
-        #TODO: maybe limit batch size
-        #observation_list=torch.tensor(observation_list, device=torch_helpers.device)
+        next_obs = self.maybe_normalize_obs(next_obs)
         bs=self._model._backward_map(next_obs)
         return bs
 
@@ -315,7 +314,6 @@ class ForwardBackwardController():
     # see: Metamotivo Paper p.28
     @torch.no_grad()
     def zr_from_goals(self, next_obs):
-        next_obs = self.maybe_normalize_obs(next_obs)
         bs = self.calculate_Bs(next_obs)
         z_r = torch.mean(bs, dim=0)
         z_r = self.project_z(z_r)
@@ -332,7 +330,6 @@ class ForwardBackwardController():
     @torch.no_grad()
     def estimate_z_r(self, next_obs, goal, env: FetchPickAndPlaceConstruction, bs=None, wr=True):
         if bs is None:
-            next_obs = self.maybe_normalize_obs(next_obs)
             bs = self.calculate_Bs(next_obs)
         #print(f"Goals for inference: {goal} type: {type(goal)}")
         rewards = env.compute_rewards_goal(torch_helpers.to_numpy(next_obs), goal)
@@ -342,6 +339,10 @@ class ForwardBackwardController():
             rewards = rewards*F.softmax(10 * rewards, dim=0)
         z_r=torch.matmul(rewards.T, bs)
         return self.project_z(z_r)
+
+    @torch.no_grad()
+    def zr_imitation(self, next_obs=None, bs=None, wr=True):
+
 
 
     def project_z(self, z):
