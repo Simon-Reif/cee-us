@@ -46,7 +46,7 @@ controller_params:
     lr_b: 1.0e-4
     q_loss_coef: 0
     fb_pessimism_penalty: 0.0
-    fb_target_tau: 1.0e-2
+    fb_target_tau: 1.0e-3
 
 eval:
   where_appl_start_states_expert: true
