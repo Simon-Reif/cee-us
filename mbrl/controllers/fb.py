@@ -340,8 +340,8 @@ class ForwardBackwardController():
         z_r=torch.matmul(rewards.T, bs)
         return self.project_z(z_r)
 
-    @torch.no_grad()
-    def zr_imitation(self, next_obs=None, bs=None, wr=True):
+    # @torch.no_grad()
+    # def zr_imitation(self, next_obs=None, bs=None, wr=True):
 
 
 
