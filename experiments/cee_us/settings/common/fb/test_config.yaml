@@ -4,6 +4,7 @@ __import__:
 
 #training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
 
+train_data_tag: "test_data_tag"
 training_data_names: [cee_us_freeplay, planner_flip]
 training_data:
   cee_us_freeplay:
@@ -29,6 +30,11 @@ number_of_rollouts: 10
 debug: true
 logging:
   project: "test"
+  set_dynamic_wandbname: true
+  wandb_name_params: ["disc", "zdim", "mr", "tau", "orth"]
+  wandb_name_prefix: "test_name_prefix"
+  data_tag_in_name: true
+
 
 #base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"
@@ -101,10 +107,14 @@ controller_params:
 
   
 eval:
+  s_eval:
+    num_eval_trajectories: 100
+    adaptation_modalities: ["goal_reaching", "imitation", ""]
+  start_states_from_train_data: true
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr
   num_inference_samples: 50_000
-  num_inference_goals: 500
+  #num_inference_goals: 500
   eval_every_steps: 100_000
   # "Throw" translates into "Slide" in env_params.case
   eval_tasks: ["Reach", "PickAndPlace", "Singletower", "Throw", "Flip"]

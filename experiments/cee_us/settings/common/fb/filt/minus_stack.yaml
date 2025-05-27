@@ -1,0 +1,25 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/filt/filt_common.yaml"
+
+#working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_19/disc90_zdim100_qloss0.1"
+train_data_tag: "minus_stack"
+
+training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_throw]
+training_data:
+  cee_us_freeplay:
+    dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
+    weight: 3.0
+    max_episodes: False
+  planner_flip:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered"
+    weight: 1.0
+    max_episodes: 1500
+  planner_pp:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem/checkpoints_000/filtered"
+    weight: 1.0
+    max_episodes: 1500
+  
+  planner_throw:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem/checkpoints_000/filtered"
+    weight: 1.0
+    max_episodes: 1500

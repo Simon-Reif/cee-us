@@ -2,6 +2,22 @@ import numpy as np
 from mbrl.offline_helpers.buffer_utils import load_buffer_with_goals, load_buffer_wog
 
 
+#dicts defining with datasets count as "expert" data for tasks
+dataset_to_task_map = {
+    "planner_flip": "Flip",
+    "planner_throw": "Throw",
+    "planner_pp": "PickAndPlace",
+    "planner_stack": "Singletower",
+}
+
+# in future values may be lists
+task_to_dataset_map = {
+    "Flip": "planner_flip",
+    "Throw": "planner_throw",
+    "PickAndPlace": "planner_pp",
+    "Singletower": "planner_stack",
+}
+
 # data: n_datasets x dataset length(heterogenous) x data dim
 # probs: n_datasets
 def mean_std_weighted_data(data, probs):
@@ -72,9 +88,27 @@ class BufferManager:
         start_states = [self.buffers[val].sample_start_states(count)  for val, count in zip(vals, counts)]
         start_states = np.concatenate(start_states)
         return start_states
-
         
     def get_obs_dim(self):
         return self.buffers[0][0]["observations"].shape[-1]
     def get_action_dim(self):
         return self.buffers[0][0]["actions"].shape[-1]
+    
+    # returns a list of tuples (task, trajectories)
+    def get_tasks_and_traj_from_exp_data(self, num_samples):
+        return_tuples = []
+        for idx, data_name in enumerate(self.names):
+            if data_name in dataset_to_task_map:
+                task = dataset_to_task_map[data_name]
+                exp_data = self.buffers[idx]
+                trajectories = exp_data.random_n_rollouts(num_samples)
+                return_tuples.append((task, trajectories))
+        return return_tuples
+
+    def maybe_get_expert_buffer(self, task):
+        if task in task_to_dataset_map:
+            dataset = task_to_dataset_map[task]
+            if dataset in self.names:
+                idx = self.names.index(dataset)
+                return self.buffers[idx]
+        return False

@@ -122,7 +122,7 @@ def main(params):
 
 if __name__ == "__main__":
     #hacky check to see if executed by sweep agent
-    if is_settings_file(sys.argv[1]):
+    if len(sys.argv)>=2 and is_settings_file(sys.argv[1]):
         params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
         wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
 

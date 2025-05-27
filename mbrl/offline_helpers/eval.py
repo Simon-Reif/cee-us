@@ -12,6 +12,15 @@ from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
 
+
+#for eval/adapt on data not in rolloutbuffer (and reference if other data trained on)
+exp_data_dirs = {
+    "planner_flip": "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered",
+    "planner_throw": "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem/checkpoints_000/filtered",
+    "planner_pp": "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem/checkpoints_000/filtered",
+    "planner_stack": "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem/checkpoints_000/filtered",
+}
+
 # returns success rates for all rollouts, so we can compare to individual rollouts, calcuate std, etc
 def calculate_success_rates(env: FetchPickAndPlaceConstruction, buffer: RolloutBuffer):
     success_rate = []
@@ -38,6 +47,22 @@ def calculate_success_rates(env: FetchPickAndPlaceConstruction, buffer: RolloutB
             success_rate.append(rollout_success[-1]/env.nObj)
     #print("Success rate over {} rollouts in task {}, is {}".format(len(buffer), env.case, np.asarray(success_rate).mean()))#
     return np.array(success_rate)
+
+def maybe_set_start_states(buffer_manager, params, task):
+    if "where_appl_start_states_expert" in params and params.eval.where_appl_start_states_expert:
+        exp_buffer = buffer_manager.maybe_get_expert_buffer(task)
+        if exp_buffer:
+            if params.debug:
+                print(f"Using expert buffer {exp_buffer.name} from training data for start states")
+            return exp_buffer.sample_start_states(params.number_of_rollouts)
+    if params.eval.start_states_from_train_data:
+        if params.debug:
+            print("Using training data for start states")
+        return buffer_manager.sample_start_states(params.number_of_rollouts)
+    else:
+        if params.debug:
+            print("Using random start states")
+        return None
 
 def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, debug=False):
     eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
@@ -76,15 +101,13 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         #this only uses observations in calculating rewards since bs fixed between tasks
         z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
         controller.set_zr(z_r)
-        if debug:
-            print(f"Calculated zr: {z_r}")
+        # if debug:
+        #     print(f"Calculated zr: {z_r}")
         ### Task Adaptation End
         rollout_buffer = RolloutBuffer()
         #TODO: set params.num_rollouts to eval.num_eval_episodes
-        if params.eval.start_states_from_train_data:
-            start_states = offline_data.sample_start_states(params.number_of_rollouts)
-        else:
-            start_states = None
+        start_states = maybe_set_start_states(offline_data, params, task)
+
         rollout_buffer = gen_rollouts(
             params,
             rollout_man,
@@ -148,80 +171,34 @@ def print_best_success_by_task(best_success_by_task, console=False, to_yaml=Fals
             print(f"Best success rate for task {task} is {success['success_rate']} at iteration {success['iter']}")
     
 
-def _find_match(obs, waypoint, threshold):
-    found =False
-    i=0
-    smallest_dist=None
-    while not found and i<len(obs):
-        dist=np.linalg.norm(obs[i]-waypoint)
-        if dist<threshold:
-            found=True
-            idx=i
-        if smallest_dist is None:
-            smallest_dist=dist
-        elif smallest_dist>dist:
-            smallest_dist=dist
-            idx=i
-        i+=1
-    if found:
-        return idx, dist, found
-    else:
-        return idx, smallest_dist, found
-    
+def _eval_single_traj():
+    pass
 
-# return indices of matched waypoints, distances, under_threshold, and if all waypoints were matched
-def _discr_match(obs, ctrl_waypoints, threshold):
-    idx, dist, under_thresh  = _find_match(obs, ctrl_waypoints[0], threshold)
-    obs_rest=obs[idx:]
-    ctrl_waypoints_rest=ctrl_waypoints[1:]
-    n_obs = len(obs_rest)
-    n_wp = len(ctrl_waypoints_rest)
-    if n_obs<n_wp:
-        return [idx], [dist], [under_thresh], False
-    if n_wp==0:
-        return [idx], [dist], [under_thresh], True
-    idcs, dists, under_thresholds, all_matched = _discr_match(obs_rest, ctrl_waypoints_rest, threshold)
-    idcs = [i+idx for i in idcs]
-    idcs.insert(0, idx)
-    dists.insert(0, dist)
-    under_thresholds.insert(0, under_thresh)
-    return idcs, dists, under_thresholds, all_matched
+#TODO: task adaptation functions for last state, series of states, rewards, etc
 
+# def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
 
+#     #TODO: read env task from buffer_manager
+#     #TODO: read kind of eval: goal, traj, etc
+#     #TODO: get num of evals
 
-def on_distr_motion_tracking(controller: ForwardBackwardController, buffer:RolloutBuffer, env, params, t=None, debug=False):
-    num_eval_traj = 100
-    num_states_to_match=10
-    #TODO: set threshold to what makes sense from observation space
-    threshold=0.5
-    traj_ids = np.random.choice(len(buffer), num_eval_traj)
-    state_ids = np.linspace(0, len(buffer[0])-1, num_states_to_match, dtype=int)
-    params.num_rollouts = 1
-    for traj_id in traj_ids:
-        traj = buffer[traj_id]
-        obs = traj["next_observations"]
-        z_r = controller.zr_from_states(obs[state_ids])
-        controller.set_zr(z_r)
-        ctrl_rollouts = RolloutBuffer()
-        rollout_man = RolloutManager(env, params.rollout_params, start_state=obs[0])
-        ctrl_rollouts = gen_rollouts(
-            params,
-            rollout_man,
-            controller,
-            None, #initial_controller
-            ctrl_rollouts,
-            None, #forward_model
-            t, #iteration
-            False, #do_initial_rollouts
-        )
-        ctrl_waypoints=ctrl_rollouts[0]["next_observations"][state_ids]
-        idcs, dists, under_thresh, all_matched = _discr_match(obs, ctrl_waypoints)
+#     num_eval_traj = params.eval.s_eval.num_eval_traj # or change name
+#     task_traj_tuples = buffer_manager.get_tasks_and_traj_from_exp_data(num_eval_traj)
+#     for task, exp_trajectories in task_traj_tuples:
+#         rollout_buffer = RolloutBuffer()
 
+#         env_params=params.eval_envs[task]
+#         ### Task Adaptation
+#         env=task_params.env
+#         env_params=task_params.env_params
+#         env = env_from_string(env, **env_params)
 
-if __name__ == "__main__":
-    a = np.array([10, 4, 9, 3, 11, 1, 1, 7, 3], dtype=np.float32)
-    b = np.array([10.9, 1, 1.1, 7.2], dtype=np.float32)
-    print(a.dtype, b.dtype)
-    start_t = time.time()
-    print(_discr_match(a, b, 0.5))
-    print(f"Elapsed time: {time.time()-start_t}")
+#         params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
+
+        
+#         # make env with state(incl goal position)
+#         # task adaptation to  last state, series of states, states and rewards... etc
+#         # run for one episode, add it to rolloutbuffer
+#     #maybe use calculate successes function from above?
+
+#     pass

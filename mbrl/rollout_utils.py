@@ -12,8 +12,6 @@ from mbrl import allogger
 from mbrl.base_types import Controller
 from mbrl.controllers.abstract_controller import ParallelController
 from mbrl.controllers.fb import ForwardBackwardController
-from mbrl.controllers.bc import BehaviorCloningController
-#from mbrl.controllers.fb_cpr import FBcprController
 from mbrl.environments.abstract_environments import (
     GoalSpaceEnvironmentInterface,
     GroundTruthSupportEnv,
