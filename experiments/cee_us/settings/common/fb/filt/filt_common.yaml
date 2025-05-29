@@ -37,7 +37,7 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 100
+      z_dim: 50
   train:
     discount: 0.90
     ortho_coef: 1.0
