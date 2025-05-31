@@ -1,3 +1,4 @@
+import copy
 import yaml
 import wandb
 import time
@@ -92,7 +93,6 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         env = env_from_string(env, **env_params)
         params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
         print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
-        params.rollout_params.obs_wo_goals = True
         rollout_man = RolloutManager(env, params.rollout_params)
         #TODO: set goals for obs from buffer
         #TODO: set just one goal, use that goal in the env
@@ -171,34 +171,89 @@ def print_best_success_by_task(best_success_by_task, console=False, to_yaml=Fals
             print(f"Best success rate for task {task} is {success['success_rate']} at iteration {success['iter']}")
     
 
-def _eval_single_traj():
-    pass
+def _random_uniform_indices(length_arr, ratio):
+    num_indices = np.round(length_arr*ratio).astype(int)
+    return np.random.choice(length_arr, num_indices, replace=False)
 
-#TODO: task adaptation functions for last state, series of states, rewards, etc
 
-# def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
+#TODO: pretty ugly, maybe refactor
+def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
 
-#     #TODO: read env task from buffer_manager
-#     #TODO: read kind of eval: goal, traj, etc
-#     #TODO: get num of evals
+    #adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
+    adapt_modalities = params.eval.s_eval.adaptation_modalities
 
-#     num_eval_traj = params.eval.s_eval.num_eval_traj # or change name
-#     task_traj_tuples = buffer_manager.get_tasks_and_traj_from_exp_data(num_eval_traj)
-#     for task, exp_trajectories in task_traj_tuples:
-#         rollout_buffer = RolloutBuffer()
+    #to set number_of_rollouts and rollout_params.task_horizon
+    eval_rollout_params = copy.deepcopy(params.rollout_params)
 
-#         env_params=params.eval_envs[task]
-#         ### Task Adaptation
-#         env=task_params.env
-#         env_params=task_params.env_params
-#         env = env_from_string(env, **env_params)
-
-#         params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
-
+    num_eval_traj = params.eval.s_eval.num_eval_trajectories # or change name
+    task_traj_tuples = buffer_manager.get_tasks_and_traj_from_exp_data(num_eval_traj)
+    for task, exp_trajectories in task_traj_tuples:
+        rollout_buffers = {adapt_mod: RolloutBuffer() for adapt_mod in adapt_modalities}
+        task_params=params.eval_envs[task]
+        ### Task Adaptation
+        env=task_params.env
+        env_params=task_params.env_params
+        env = env_from_string(env, **env_params)
+        rollout_man = RolloutManager(env, eval_rollout_params)
         
-#         # make env with state(incl goal position)
-#         # task adaptation to  last state, series of states, states and rewards... etc
-#         # run for one episode, add it to rolloutbuffer
-#     #maybe use calculate successes function from above?
+        for exp_traj in exp_trajectories:
+            len_traj = len(exp_traj["observations"])
+            rollout_man.task_horizon = len_traj
+            start_state = exp_traj["env_states"][0]
+            env.set_GT_state(start_state)
+            goal_positions = env.goal
+            assert all(goal_positions == env.goal_from_state(start_state)), "Goal positions from state and env goal do not match"
 
-#     pass
+            #task adaptation
+
+            next_obs_torch = torch_helpers.to_tensor(exp_traj["next_observations"]).to(torch_helpers.device)
+            rewards_exp = exp_traj["rewards"]
+
+            # Task Adaptation and Rollout Generation
+            if "gr" in adapt_modalities:
+                #maybe dimensionality a problem-> test
+                z_r = controller.zr_from_obs(next_obs_torch[-1])
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout(controller, start_state)
+                rollout_buffers["gr"].extend(rollout)
+            idcs10 = None
+            if "im10" in adapt_modalities:
+                idcs10 = _random_uniform_indices(len_traj, 0.1)
+                # maybe need to use a different function here rather than just indexing
+                Bs = controller.calculate_Bs(next_obs_torch[idcs10])
+                z_r = controller.zr_from_obs(bs=Bs)
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout(controller, start_state)
+                rollout_buffers["im10"].extend(rollout)
+            if "rew10" in adapt_modalities:
+                if idcs10 is None:
+                    idcs10 = _random_uniform_indices(len_traj, 0.1)
+                    Bs = controller.calculate_Bs(next_obs_torch[idcs10])
+                rew = rewards_exp[idcs10]
+                z_r = controller.zr_from_obs_and_rews(bs=Bs, rewards=rew)
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout(controller, start_state)
+                rollout_buffers["rew10"].extend(rollout)
+            if "rew50" in adapt_modalities:
+                idcs50 = _random_uniform_indices(len_traj, 0.5)
+                Bs = controller.calculate_Bs(next_obs_torch[idcs50])
+                rew = rewards_exp[idcs50]
+                z_r = controller.zr_from_obs_and_rews(bs=Bs, rewards=rew)
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout(controller, start_state)
+                rollout_buffers["rew50"].extend(rollout)
+
+        # Evaluation
+        disc = params.controller_params.train.discount
+        avg_rew_exp = np.array([np.mean(exp_traj.avg_disc_reward(disc)) for exp_traj in exp_trajectories])
+        for adapt_modality in adapt_modalities:
+            metric_prefix = f"s_eval/{task}/{adapt_modality}/"
+            buffer = rollout_buffers[adapt_modality]
+            rew_fb = buffer.get_mean_disc_rewards_per_rollout(disc)
+            mean_rel_rew = np.mean(rew_fb / avg_rew_exp)
+            wandb.log({f"{metric_prefix}mean_relative_reward": mean_rel_rew}, step=t)
+
+            success_rates_eps = calculate_success_rates(env, buffer)
+            wandb.log({f"{metric_prefix}success_rate": np.mean(success_rates_eps)}, step=t)
+
+            #TODO: make and return nested dict of metrics

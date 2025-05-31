@@ -47,7 +47,8 @@ class Rollout(object):
         field_names = kwargs.keys()
         transitions = zip(*kwargs.values())
         return cls(field_names, transitions)
-
+    
+    # ! doesn't fit with how I use "discount" !
     def cost_to_go(self, t, discount=1.0):
         return sum([self._data["rewards"][i] * discount ** (t - i) for i in range(t, len(self._data))])
 
@@ -56,6 +57,12 @@ class Rollout(object):
     
     def truncate(self, end_index):
         new_transitions = [field_data[:end_index] for field_data in self._data]
+    
+    def avg_reward(self):
+        return np.mean(self._data["rewards"])
+    
+    def avg_disc_reward(self, discount):
+        return np.mean([self._data["rewards"][i] * discount ** i for i in range(len(self._data))])
 
 
 # noinspection PyAbstractClass
@@ -276,9 +283,13 @@ class RolloutBuffer(abc.Sequence):
         indices = np.random.choice(len_rollouts, num_samples, replace=False)
         return flat_rollouts[indices]
     
-    def get_random_transitions(self, num_samples):
-        samples = self.sample(num_samples)
-        return samples["observations"], samples["actions"], samples["next_observations"]
+    def get_mean_rewards_per_rollout(self):
+        mean_rewards = [rollout.avg_reward() for rollout in self.rollouts]
+        return np.array(mean_rewards)
+    
+    def get_mean_disc_rewards_per_rollout(self, discount):
+        mean_disc_rewards = [rollout.avg_disc_reward(discount) for rollout in self.rollouts]
+        return np.array(mean_disc_rewards)
     
     def get_mean_std(self):
         flat_rollouts = self.flat

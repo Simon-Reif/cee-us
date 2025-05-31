@@ -112,6 +112,15 @@ class RolloutManager:
             and isinstance(policy, ParallelController)
             and (self.parallel_training or mode == "evaluate")
         )
+    
+    def single_rollout(self, controller, start_state):
+        rollout = self.sample(
+                    controller,
+                    render=False,
+                    no_rollouts=1,
+                    start_state=[start_state],
+                    )
+        return rollout
 
     # "start_ob/state" are lists of length no_rollouts
     def sample(

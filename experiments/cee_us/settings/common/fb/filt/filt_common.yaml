@@ -7,7 +7,7 @@ work_dir_prefix: "results/cee_us/construction/2blocks"
 logging:
   set_dynamic_wandbname: true
   wandb_name_prefix: "exp_start_states"
-  wandb_name_params: ["disc", "zdim", "tau"]
+  wandb_name_params: ["mr", "disc", "zdim", "tau"]
   data_tag_in_name: true
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
@@ -37,9 +37,10 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 50
+      z_dim: 100
   train:
     discount: 0.90
+    train_goal_ratio: 0.25
     ortho_coef: 1.0
     lr_f: 1.0e-4
     lr_actor: 1.0e-4
@@ -49,4 +50,5 @@ controller_params:
     fb_target_tau: 1.0e-3
 
 eval:
-  where_appl_start_states_expert: true
+  where_appl_start_states_expert: false
+  start_states_from_train_data: false

@@ -19,7 +19,7 @@ from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.params_utils import is_settings_file, read_params_from_cmdline, save_settings_to_json
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
-from mbrl.offline_helpers.eval import eval, print_best_success_by_task, update_best_success_by_task
+from mbrl.offline_helpers.eval import eval, print_best_success_by_task, s_eval, update_best_success_by_task
 from mbrl.workflow.name_runs_dirs import get_wandb_name, get_working_dir
 
 
@@ -95,10 +95,13 @@ def main(params):
             params_copy["number_of_rollouts"] = 2
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
-            #success_rates_eps, success_rates, z_r_dict, bs = eval(fb_controller, buffer_manager, params_copy, iteration)
+            
+            s_eval(fb_controller, buffer_manager, params_copy, iteration, debug=debug)
+
             eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration)
 
-            # TODO: move this into eval
+            # #TODO: update eval return dict with alternative evals (s_eval)
+            # # TODO: move this into eval
             updated = update_best_success_by_task(best_success_by_task, eval_return_dict["success_rates"], iteration, debug)
             if updated:
                 print_best_success_by_task(best_success_by_task, to_yaml=True, working_dir=params.working_dir)

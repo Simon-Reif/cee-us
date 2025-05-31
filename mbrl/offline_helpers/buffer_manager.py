@@ -61,8 +61,8 @@ class BufferManager:
         buffer_obs = [buffer["next_observations"] for buffer in self.buffers]
         buffer_obs = np.array(buffer_obs, dtype=object)
         mean, std = mean_std_weighted_data(buffer_obs, self.probs)
-        if self.debug:
-            print(f"Mean: {mean}, Std: {std}")
+        # if self.debug:
+        #     print(f"Mean: {mean}, Std: {std}")
         self.mean = mean
         self.std = std
         return mean, std
@@ -73,8 +73,8 @@ class BufferManager:
         # this is probably slow but first thing that came to mind for sampling categorically
         selection = np.random.choice(len(self.buffers), size=num_samples, p=self.probs)
         vals, counts = np.unique(selection, return_counts=True)
-        if self.debug:
-            print(f"Vals: {vals}, Counts: {counts}")
+        # if self.debug:
+        #     print(f"Vals: {vals}, Counts: {counts}")
         batches = [self.buffers[val].sample(count)  for val, count in zip(vals, counts)]
         batch = np.concatenate(batches)
         return batch
@@ -82,9 +82,9 @@ class BufferManager:
     def sample_start_states(self, num_samples):
         selection = np.random.choice(len(self.buffers), size=num_samples, p=self.probs)
         vals, counts = np.unique(selection, return_counts=True)
-        if self.debug:
-            print("Sampling Start States:")
-            print(f"Vals: {vals}, Counts: {counts}")
+        # if self.debug:
+        #     print("Sampling Start States:")
+        #     print(f"Vals: {vals}, Counts: {counts}")
         start_states = [self.buffers[val].sample_start_states(count)  for val, count in zip(vals, counts)]
         start_states = np.concatenate(start_states)
         return start_states
@@ -112,3 +112,27 @@ class BufferManager:
                 idx = self.names.index(dataset)
                 return self.buffers[idx]
         return False
+
+
+if __name__ == "__main__":
+    ar1 = np.random.randint(0, 19, size=(10, 42))
+    ar2 = np.random.randint(0, 15, size=(10, 42))
+    ar3 = np.random.randint(0, 9, size=(15, 42)) # *2
+
+    probs = np.array([0.2, 0.2, 0.6])
+
+    buff_arr = np.array([ar1, ar2, ar3], dtype=object)
+    print(buff_arr.shape)
+
+    mean_bm, std_bm = mean_std_weighted_data(buff_arr, probs)
+
+    ar3_double = np.tile(ar3, (2, 1))
+
+    arr_concat = np.concatenate([ar1, ar2, ar3_double], axis=0)
+    mean_concat = np.mean(arr_concat, axis=0)
+    std_concat = np.std(arr_concat, axis=0)
+    print("Mean BM:", mean_bm)  
+    print("Mean Concat:", mean_concat)
+    print("Std BM:", std_bm)
+    print("Std Concat:", std_concat)
+    

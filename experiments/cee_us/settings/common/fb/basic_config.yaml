@@ -18,7 +18,7 @@ debug: false
 logging:
   project: "cee-us"
   set_dynamic_wandbname: true
-  wandb_name_params: ["disc", "zdim"]
+  wandb_name_params: ["disc", "zdim", "mr"]
 
 #base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"
@@ -90,13 +90,18 @@ controller_params:
     eps: 1.0e-5
 
 
-  
 eval:
-  start_states_from_train_data: true
+  s_eval:
+    num_eval_trajectories: 10
+    # gr: last state
+    # im: uniformly sampled states
+    # rew uniformly sampled states and their rewards
+    adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
+  where_appl_start_states_expert: false
+  start_states_from_train_data: false
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr
   num_inference_samples: 50_000
-  num_inference_goals: 500
   eval_every_steps: 100_000
   # "Throw" translates into "Slide" in env_params.case
   eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip", "Reach"]

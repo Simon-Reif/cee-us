@@ -218,6 +218,7 @@ class FetchPickAndPlaceConstruction(
     def get_GT_state(self):
         return np.concatenate((super().get_GT_state(), self.goal))
 
+    #now doesn't set goal any more if "fixed goal" exists
     def set_GT_state(self, state):
         mj_state = state[: -self.goal_space_size]
         if not hasattr(self, "fixed_goal") or self.fixed_goal is None:

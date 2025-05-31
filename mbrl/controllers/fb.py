@@ -299,49 +299,64 @@ class ForwardBackwardController():
     def set_zr(self, z_r):
         self.z_r = z_r
 
-    
-    # for calculating zr s for different tasks with same offline data
-    # TODO: with batch norm if norm obs parameter; separate function for individual states
-    # TODO: batch norm OR normalize with data mean, std?
-    @torch.no_grad()
-    def calculate_Bs(self, next_obs: torch.Tensor)->torch.Tensor:
-        next_obs = self.maybe_normalize_obs(next_obs)
-        bs=self._model._backward_map(next_obs)
-        return bs
-
-
-    #TODO: next obs can be batch or single obs OR add batch dimension to use this function
-    # see: Metamotivo Paper p.28
-    @torch.no_grad()
-    def zr_from_goals(self, next_obs):
-        bs = self.calculate_Bs(next_obs)
-        z_r = torch.mean(bs, dim=0)
-        z_r = self.project_z(z_r)
-        return z_r
 
     @torch.no_grad()
     def maybe_normalize_obs(self, obs):
         if self.params.model.norm_obs:
             obs = (obs-self.data_mean)/self.data_std
         return obs
-        
-        
+    
+    def maybe_add_batch_dim(self, obs):
+        if obs is not None and obs.dim() == 1:
+            obs = obs.unsqueeze(0)
+        return obs
+    
+    # for calculating zr s for different tasks with same offline data
+    # TODO: with batch norm if norm obs parameter; separate function for individual states
+    # TODO: batch norm OR normalize with data mean, std?
+    @torch.no_grad()
+    def calculate_Bs(self, next_obs: torch.Tensor)->torch.Tensor:
+        next_obs = self.maybe_add_batch_dim(next_obs)
+        next_obs = self.maybe_normalize_obs(next_obs)
+        bs=self._model._backward_map(next_obs)
+        return bs
 
+    def _zr_from_bs_rews(self, bs, rews, wr=True):
+        # bs: batch x z_dim
+        # rews: batch
+        rews = torch_helpers.to_tensor(rews).to(torch_helpers.device)
+        if wr:
+            rews = rews * F.softmax(10 * rews, dim=0)
+        z_r = torch.matmul(rews.T, bs)
+        return self.project_z(z_r)
+        
+    # only works with batches for now
     @torch.no_grad()
     def estimate_z_r(self, next_obs, goal, env: FetchPickAndPlaceConstruction, bs=None, wr=True):
         if bs is None:
             bs = self.calculate_Bs(next_obs)
         #print(f"Goals for inference: {goal} type: {type(goal)}")
         rewards = env.compute_rewards_goal(torch_helpers.to_numpy(next_obs), goal)
-        rewards = torch_helpers.to_tensor(rewards).to(torch_helpers.device)
-        #rewards = -env.cost_fn(obs, actions, next_obs).to(torch_helpers.device)
-        if wr:
-            rewards = rewards*F.softmax(10 * rewards, dim=0)
-        z_r=torch.matmul(rewards.T, bs)
-        return self.project_z(z_r)
+        z_r = self._zr_from_bs_rews(bs, rewards, wr=wr)
+        return z_r
+    
+    #TODO: next obs can be batch or single obs OR add batch dimension to use this function
+    # see: Metamotivo Paper p.28
+    @torch.no_grad()
+    def zr_from_obs(self, next_obs=None, bs=None):
+        if bs is None:
+            bs = self.calculate_Bs(next_obs)
+        z_r = torch.mean(bs, dim=0)
+        z_r = self.project_z(z_r)
+        return z_r
 
-    # @torch.no_grad()
-    # def zr_imitation(self, next_obs=None, bs=None, wr=True):
+    def zr_from_obs_and_rews(self, next_obs=None, rewards=None, bs=None):
+        if bs is None:
+            bs = self.calculate_Bs(next_obs)
+        z_r = self._zr_from_bs_rews(bs, rewards)
+        return z_r
+        
+    
 
 
 
@@ -381,6 +396,7 @@ class ForwardBackwardController():
         agent._model.load_state_dict(model_state_dict)
         return agent
 
+    # only single (one dimensional) obs, no batch dimension
     @torch.no_grad()
     def get_action(self, obs, z=None, state=None, mode="test"):
         if self.z_r is None and z is None:

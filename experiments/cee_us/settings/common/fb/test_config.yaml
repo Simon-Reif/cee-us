@@ -108,8 +108,11 @@ controller_params:
   
 eval:
   s_eval:
-    num_eval_trajectories: 100
-    adaptation_modalities: ["goal_reaching", "imitation", ""]
+    num_eval_trajectories: 2
+    # gr: last state
+    # im: all states
+    # im all states and their rewards
+    adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
   start_states_from_train_data: true
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr
