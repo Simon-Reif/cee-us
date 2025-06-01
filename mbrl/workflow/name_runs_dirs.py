@@ -21,7 +21,8 @@ param_name_map = {
     "mr": ("controller_params.train.train_goal_ratio", lambda x: f"{float(x):1.2}"),
     "tau": ("controller_params.train.fb_target_tau", lambda x:_only_exp(x)),
     "orth": ("controller_params.train.ortho_coef", lambda x: f"{x}"),
-
+    "exp_weight": ("training_data.planner_flip.weight", lambda x: f"{x}"),
+    "exp_eps": ("training_data.planner_flip.max_episodes", lambda x: f"{x}"),
 }
 
 def _name_substr(params, tag):
