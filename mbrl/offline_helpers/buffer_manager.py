@@ -42,9 +42,9 @@ class BufferManager:
             dir = self.training_data[name]["dir"]
             if "with_goals" in self.training_data[name] and self.training_data[name]["with_goals"]:
                 print(f"Loading buffer with goals from {dir}")
-                buffer = load_buffer_with_goals(params, dir=dir)
+                buffer = load_buffer_with_goals(dir=dir)
             else:
-                buffer = load_buffer_wog(params, dir=dir)
+                buffer = load_buffer_wog(dir=dir)
             max_eps = self.training_data[name]["max_episodes"]
             if max_eps and len(buffer) > max_eps:
                 buffer = buffer.random_n_rollouts(num_rollouts=max_eps)

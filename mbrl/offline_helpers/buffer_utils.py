@@ -25,6 +25,11 @@ def load_buffer(path):
         buffer = pickle.load(f)
     return buffer
 
+def env_from_workdir(working_dir):
+    params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
+    env = env_from_string(params.env, **params["env_params"])
+    return env
+
 def filter_buffer_by_length(buffer, max_length=None, save_path=None):
     new_rollouts = [copy.deepcopy(rollout) for rollout in buffer if len(rollout) <= max_length]
     new_buffer = RolloutBuffer(rollouts=new_rollouts)
@@ -34,10 +39,10 @@ def filter_buffer_by_length(buffer, max_length=None, save_path=None):
 
 
 # indices of the last timestep of each episode
-def truncate_episodes(buffer: RolloutBuffer, indices, save_path=None):
+def truncate_episodes(buffer: RolloutBuffer, indices, save_path=None, extra_steps=0):
     new_buffer = copy.deepcopy(buffer)
     for i in range(len(buffer)):
-        new_buffer[i]._data = buffer[i]._data[:indices[i]+1]
+        new_buffer[i]._data = buffer[i]._data[:indices[i]+1+extra_steps]
     if save_path is not None:
         save_buffer(new_buffer, save_path)
     return new_buffer
@@ -69,7 +74,7 @@ def add_goals_to_buffer(buffer:RolloutBuffer, env: MaskedGoalSpaceEnvironmentInt
         new_rollouts.append(new_rollout)
     return RolloutBuffer(rollouts=new_rollouts)
 
-def load_buffer_with_goals(params, dir=None):
+def load_buffer_with_goals(params=None, dir=None):
     if dir is not None:
         dir = dir
     else:
@@ -78,7 +83,7 @@ def load_buffer_with_goals(params, dir=None):
     return buffer
 
 
-def load_buffer_wog(params, dir=None):
+def load_buffer_wog(params=None, dir=None):
     if dir is not None:
         dir = dir
     else:
@@ -154,22 +159,128 @@ def repair_dtype_bug(buffer, save_path=None):
             pickle.dump(new_buffer, f)
     return new_buffer
 
+def indices_first_successes(buffer_with_goals, env, min_successes=2):
+    stable_T = 5 # as in "calculate success rates"
+    eps_successes = []
+    first_successes_one_block = []
+    first_successes_two_blocks = []
+    indices_trunc=[]
+    indices_succ_eps = []
+    for i in range(len(buffer_with_goals)):
+        timesteps_successes = env.eval_success(buffer_with_goals[i]["next_observations"])
+        vals, unique_indices, unique_counts = np.unique(timesteps_successes, return_index=True, return_counts=True)
+        
+        # independent of tasks
+        idcs_ones = vals==1
+        if any(idcs_ones):
+            first_succ_one_block = unique_indices[idcs_ones][0]
+            first_successes_one_block.append(first_succ_one_block)
+        idcs_twos = vals==2
+        if any(idcs_twos):
+            first_succ_two_blocks = unique_indices[idcs_twos][0]
+            first_successes_two_blocks.append(first_succ_two_blocks)
+        
+        # TODO: change this part for other tasks than Throw&
+        if "tower" in env.case:
+            dy = np.diff(timesteps_successes)
+            stable = np.logical_and(timesteps_successes[1:]==env.num_blocks, dy==0)
+            success = np.sum(stable)>stable_T
+
+            stable_indices = np.nonzero(stable)[0]
+            if success:
+                indices_trunc.append(stable_indices[stable_T])
+            else:
+                indices_trunc.append(len(timesteps_successes))
+                indices_succ_eps.append(i)
+            eps_successes.append(success)
+            
+        elif env.case == 'PickAndPlace':
+            successes = timesteps_successes==min_successes
+            indices_successes = np.nonzero(successes)[0]
+            if len(indices_successes) <= stable_T:
+                indices_trunc.append(len(timesteps_successes))
+            else:
+                indices_trunc.append(indices_successes[stable_T])
+                indices_succ_eps.append(i)
+
+            eps_successes.append(vals[unique_counts>stable_T][-1]/env.nObj)
+
+        else: # Flip, Throw
+            if min_successes in vals:
+                timestep = unique_indices[vals==min_successes][0]
+                indices_trunc.append(timestep)
+            else:
+                indices_trunc.append(len(timesteps_successes))
+                indices_succ_eps.append(i)
+            # as in "calculate success rates" function
+            eps_successes.append(timesteps_successes[-1]/env.nObj)
+        
+    eps_successes = np.array(eps_successes)
+    mean_success, std_successes = eps_successes.mean(), eps_successes.std()
+    first_successes_one_block = np.array(first_successes_one_block)
+    first_successes_two_blocks = np.array(first_successes_two_blocks)
+    mean_first_success_one_block = first_successes_one_block.mean() if len(first_successes_one_block) > 0 else None
+    mean_first_success_two_blocks = first_successes_two_blocks.mean() if len(first_successes_two_blocks) > 0 else None
+    num_success_one_block = len(first_successes_one_block)
+    num_success_two_blocks = len(first_successes_two_blocks)
+    stats_dict = {"mean_success": mean_success.item(),
+                  "std_success": std_successes.item(),
+                  "mean_first_success_one_block": mean_first_success_one_block.item(),
+                  "mean_first_success_two_blocks": mean_first_success_two_blocks.item(),
+                  "num_success_one_block": num_success_one_block,
+                  "num_success_two_blocks": num_success_two_blocks,}
+    
+    #TODO: additional dict: indices
+    return indices_trunc, indices_succ_eps, stats_dict
+
+def alt_trunc(buffer_dir, min_successes=2, subdir_name=None, steps_after_succ=0):
+    if subdir_name is None:
+        new_buffers_dir = os.path.join(buffer_dir, f"extra{steps_after_succ}")
+    else:
+        new_buffers_dir = os.path.join(buffer_dir, subdir_name)
+    trunc_subdir = os.path.join(new_buffers_dir, 'truncated')   
+    os.makedirs(trunc_subdir, exist_ok=True)
+    filtered_subdir = os.path.join(new_buffers_dir, 'filtered')
+    os.makedirs(filtered_subdir, exist_ok=True)
+    env = env_from_workdir(os.path.dirname(buffer_dir))
+    buffer_with_goals = load_buffer_with_goals(dir=buffer_dir)
+    buffer_wog = load_buffer_wog(dir=buffer_dir)
+
+    indices_trunc, indices_succ_eps, stats_dict = indices_first_successes(buffer_with_goals, env, min_successes=min_successes)
+
+    buffer_trunc= truncate_episodes(buffer_wog, indices_trunc, extra_steps=steps_after_succ, save_path=os.path.join(trunc_subdir, "rollouts_wog"))
+    buffer_filtered = buffer_trunc.rollouts_at_indices(indices_succ_eps)
+    save_buffer(buffer_filtered, os.path.join(filtered_subdir, "rollouts_wog"))
+
+    print(f"Length buffer trunc: {len(buffer_trunc)}")
+    length_buffer_filt= len(buffer_filtered)
+    print(f"Length buffer filt: {length_buffer_filt}")
+    info_dict_dir = os.path.join(new_buffers_dir, "info_dict")
+    info_dict = {
+        "indices_trunc": indices_trunc,
+        "indices_succ_eps": indices_succ_eps,
+        "length_buffer_filt": length_buffer_filt,
+    }
+    np.save(info_dict_dir, info_dict) 
+    
+
 # min_successses : {1,2}
 # task: flip, throw behave the same 
 #       pp, stack specific cutoff conditions
-def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99):
+def process_planner_buffer(working_dir, buffer_dir, min_successes=2, subdir=None, steps_after_succ=0, max_length=99):
     stable_T = 5 # as in "calculate success rates"
-    trunc_subdir = os.path.join(buffer_dir, 'truncated')   
+    if subdir is None:
+        new_buffers_dir = os.path.join(buffer_dir, f"extra{steps_after_succ}")
+    trunc_subdir = os.path.join(new_buffers_dir, 'truncated')   
     os.makedirs(trunc_subdir, exist_ok=True)
-    filtered_subdir = os.path.join(buffer_dir, 'filtered')
+    filtered_subdir = os.path.join(new_buffers_dir, 'filtered')
     os.makedirs(filtered_subdir, exist_ok=True)
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=True)
     env = env_from_string(params.env, **params["env_params"])
-
     
     with open(os.path.join(buffer_dir, "rollouts"), 'rb') as f:
         buffer_with_goals = pickle.load(f)
-    buffer_with_goals = repair_dtype_bug(buffer_with_goals)
+    #buffer_with_goals = repair_dtype_bug(buffer_with_goals)
     buffer_wog = get_buffer_wo_goals(buffer_with_goals, env)
     with open(os.path.join(buffer_dir, "rollouts_wog"), "wb") as f:
                     pickle.dump(buffer_wog, f)
@@ -239,7 +350,7 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=
                   "num_success_one_block": num_success_one_block,
                   "num_success_two_blocks": num_success_two_blocks,}
     
-
+    #TODO: additional dict: indices
     buffer_trunc=truncate_episodes(buffer_wog, indices, save_path=os.path.join(trunc_subdir, "rollouts_wog"))
     buffer_filtered=filter_buffer_by_length(buffer_trunc, max_length=max_length,
                                             save_path=os.path.join(filtered_subdir, "rollouts_wog"))
@@ -283,8 +394,31 @@ def update_yaml(path, update_dict):
         data_dict = update_dict
     yaml_save(data_dict, path)
 
+
+# TODO: another version of truncated, filtered buffer:
+# record successful episodes, truncate episodes to point of succeess 
+
+if __name__== "__main__":
+    working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem"]
+    buffer_dirs = [os.path.join(dir, "checkpoints_000") for dir in working_dirs]
+    for buffer_dir in buffer_dirs:
+        alt_trunc(buffer_dir, min_successes=2, steps_after_succ=10)
+
+if False and __name__== "__main__":
+    working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem"]
+    buffer_dirs = [os.path.join(dir, "checkpoints_000") for dir in working_dirs]
+
+    for working_dir, buffer_dir in zip(working_dirs, buffer_dirs):
+        process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
+
 # add "rollouts" (with goals) to truncated and filtered buffer dirs 
-if __name__=="__main__":
+if False and __name__=="__main__":
     working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem",
                 "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
                 "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
@@ -296,9 +430,7 @@ if __name__=="__main__":
         buffer_wog = load_buffer(os.path.join(filt_dir, "rollouts_wog"))
         buffer_with_goals = add_goals_to_buffer(buffer_wog, env)
         save_buffer(buffer_with_goals, os.path.join(filt_dir, "rollouts"))
-        
-    
-
+            
 if False and __name__=="__main__":
     freeplay_path = "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/rollouts_wog"
     flip_path = "datasets/construction/planner/filtered/1500/flip/rollouts_wog"
@@ -316,9 +448,6 @@ if False and __name__=="__main__":
     comb_buffer = combine_buffers(freeplay_buffer, flip_buffer, save_path=comb_path)
     print(f"Combined buffer contains {len(comb_buffer)} rollouts, saved at {comb_path}")
 
-
-
-
 if False and __name__=="__main__":
     buffer_path = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog"
     target_path ="datasets/construction/planner/filtered/1500/flip/rollouts_wog"
@@ -326,20 +455,6 @@ if False and __name__=="__main__":
     subbuffer = sub_buffer(buffer, num_episodes=1500, selection="random", save_path=target_path)
     print(f"Saved sub buffer of {buffer_path} to {target_path}")
     print(f"Sub buffer contains {len(subbuffer)} rollouts")
-
-if False and __name__== "__main__":
-    # working_dir = "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem"
-    # buffer_dir = os.path.join(working_dir, "checkpoints_000")
-    # process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
-
-    working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
-                "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
-                "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem"]
-    buffer_dirs = [os.path.join(dir, "checkpoints_000") for dir in working_dirs]
-    for working_dir, buffer_dir in zip(working_dirs, buffer_dirs):
-        process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
-    
-
 
 if False and __name__ == "__main__":
     import yaml
@@ -389,7 +504,6 @@ if False and __name__ == "__main__":
         with open(os.path.join(buff_dir, "rollouts_wog"), 'rb') as f:
             buffer_wog = pickle.load(f)
         truncate_episodes(buffer_wog, indices, save_path=target_path)
-
 
 if False and __name__ == "__main__":
     target_path="datasets/construction/fb/freeplay_plus_planners/rollouts_wog"
