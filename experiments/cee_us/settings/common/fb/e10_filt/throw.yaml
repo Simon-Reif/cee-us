@@ -7,8 +7,10 @@ train_data_tag: "throw"
 training_data_names: [cee_us_freeplay, planner_throw_e10]
 training_data:
   cee_us_freeplay:
+    dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
     weight: 1.0
     max_episodes: False
   planner_throw_e10:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem/checkpoints_000/extra10/filtered"
     weight: 1.0
     max_episodes: 1500
