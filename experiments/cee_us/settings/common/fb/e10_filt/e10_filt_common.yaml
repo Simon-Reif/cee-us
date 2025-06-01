@@ -1,0 +1,54 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/basic_config.yaml"
+
+# working_dir: "results/cee_us/construction/2blocks/fp_plus_all/05_19/disc90_zdim100_qloss0.1"
+work_dir_prefix: "results/cee_us/construction/2blocks"
+
+logging:
+  set_dynamic_wandbname: true
+  wandb_name_prefix: "e10"
+  wandb_name_params: ["mr", "disc", "zdim", "tau"]
+  data_tag_in_name: true
+
+training_data_names: [cee_us_freeplay, planner_flip_e10, planner_pp_e10, planner_stack_e10, planner_throw_e10]
+training_data:
+  cee_us_freeplay:
+    dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
+    weight: 4.0
+    max_episodes: False
+  planner_flip_e10:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem/checkpoints_000/extra10/filtered"
+    weight: 1.0
+    max_episodes: 1500
+  planner_pp_e10:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem/checkpoints_000/extra10/filtered"
+    weight: 1.0
+    max_episodes: 1500
+  planner_stack_e10:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem/checkpoints_000/extra10/filtered"
+    weight: 1.0
+    max_episodes: 1500
+  planner_throw_e10:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/throw_4500/gnn_ensemble_icem/checkpoints_000/extra10/filtered"
+    weight: 1.0
+    max_episodes: 1500
+
+controller_params:
+  model:
+    norm_obs: false
+    archi:
+      z_dim: 100
+  train:
+    discount: 0.90
+    train_goal_ratio: 0.25
+    ortho_coef: 1.0
+    lr_f: 1.0e-4
+    lr_actor: 1.0e-4
+    lr_b: 1.0e-4
+    q_loss_coef: 0
+    fb_pessimism_penalty: 0.0
+    fb_target_tau: 1.0e-3
+
+eval:
+  where_appl_start_states_expert: false
+  start_states_from_train_data: false
