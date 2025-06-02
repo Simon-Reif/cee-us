@@ -78,7 +78,8 @@ def main(params):
     # print("_______________Debugging_End_______________")
 
     best_success_by_task = defaultdict(dict)
-    for iteration in tqdm(range(start_iter+1, start_iter+1+params.num_train_steps)):
+    final_iter = start_iter + params_copy.num_train_steps
+    for iteration in tqdm(range(start_iter+1, final_iter+1)):
     #for iteration in tqdm(range(10)):
 
         metrics = fb_controller.update(buffer_manager, iteration)
@@ -89,7 +90,6 @@ def main(params):
             wandb.log(metrics, step=iteration)
             allogger.get_root().flush(children=True)
 
-
         ### Debug
         if debug:
             params_copy["number_of_rollouts"] = 2
@@ -98,7 +98,8 @@ def main(params):
             
             s_eval(fb_controller, buffer_manager, params_copy, iteration, debug=debug)
 
-            eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration)
+            final = iteration == final_iter
+            eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration, final)
 
             # #TODO: update eval return dict with alternative evals (s_eval)
             # # TODO: move this into eval
@@ -109,7 +110,6 @@ def main(params):
             save_fb_checkpoint(params.working_dir, iteration, eval_return_dict=eval_return_dict,
                                controller=fb_controller, loud=2 if debug else 0)
             
-        
     ###
     # End Main Loop
     ###

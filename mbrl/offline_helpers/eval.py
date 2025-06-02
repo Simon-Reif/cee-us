@@ -65,7 +65,7 @@ def maybe_set_start_states(buffer_manager, params, task):
             print("Using random start states")
         return None
 
-def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, debug=False):
+def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, final=False, debug=False):
     eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
     """"
     num_eval_episodes: 10
@@ -75,6 +75,9 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
     # TODO: maybe inference_batch_size parameter necessary
     if t is not None:
         print(f"Evaluation at iteration {t}")
+    if final:
+        params.number_of_rollouts = params.eval.number_of_rollouts_final
+
 
     inference_samples = offline_data.sample(params.eval.num_inference_samples)
     next_obs = torch_helpers.to_tensor(inference_samples["next_observations"]).to(torch_helpers.device)
@@ -244,14 +247,19 @@ def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager,
                 rollout_buffers["rew50"].extend(rollout)
 
         # Evaluation
-        disc = params.controller_params.train.discount
-        avg_rew_exp = np.array([np.mean(exp_traj.avg_disc_reward(disc)) for exp_traj in exp_trajectories])
+        # disc = params.controller_params.train.discount
+        # avg_rew_exp = np.array([np.mean(exp_traj.avg_disc_reward(disc)) for exp_traj in exp_trajectories])
+        avg_rew_exp = np.array([np.mean(exp_traj.avg_reward()) for exp_traj in exp_trajectories])
+
         for adapt_modality in adapt_modalities:
             metric_prefix = f"s_eval/{task}/{adapt_modality}/"
             buffer = rollout_buffers[adapt_modality]
-            rew_fb = buffer.get_mean_disc_rewards_per_rollout(disc)
+            
+            #rew_fb = buffer.get_mean_disc_rewards_per_rollout(disc)
+            rew_fb = buffer.get_mean_rewards_per_rollout()
+
             mean_rel_rew = np.mean(rew_fb / avg_rew_exp)
-            wandb.log({f"{metric_prefix}mean_relative_reward": mean_rel_rew}, step=t)
+            wandb.log({f"{metric_prefix}mean_relative_reward_undisc": mean_rel_rew}, step=t)
 
             success_rates_eps = calculate_success_rates(env, buffer)
             wandb.log({f"{metric_prefix}success_rate": np.mean(success_rates_eps)}, step=t)
