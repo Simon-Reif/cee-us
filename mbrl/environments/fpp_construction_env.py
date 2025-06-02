@@ -22,8 +22,6 @@ class FetchPickAndPlaceConstruction(
     def __init__(self, *, name, sparse, shaped_reward, **kwargs):
         self.shaped_reward = shaped_reward
         self.sparse = sparse
-        if "fixed_goal" in kwargs:
-            self.fixed_goal = kwargs.fixed_goal
 
         FetchBlockConstructionEnv.__init__(self, **kwargs)
         GymRoboticsGroundTruthSupportEnv.__init__(self, name=name, **kwargs)
@@ -128,6 +126,8 @@ class FetchPickAndPlaceConstruction(
             requires_grad=False,
             device=torch_helpers.device,
         )
+        if "fixed_goal" in kwargs:
+            self.fixed_goal = self._sample_goal()
 
     def obs_preproc(self, obs):
         return self.observation_wo_goal(obs)

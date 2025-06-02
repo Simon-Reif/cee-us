@@ -142,6 +142,12 @@ class RolloutManager:
         else:
             self.video = None
 
+        if hasattr(self, "fixed_start_state") and self.fixed_start_state is not None:
+            if start_state is None:
+                start_state = [self.fixed_start_state] * no_rollouts
+            else:
+                assert len(start_state) == no_rollouts, "start_state must be a list of length no_rollouts"
+
         if self.do_run_in_parallel(policy, mode):
             assert isinstance(policy, ParallelController)
             return self.par_sample(policy, render, mode, start_ob, start_state, no_rollouts)

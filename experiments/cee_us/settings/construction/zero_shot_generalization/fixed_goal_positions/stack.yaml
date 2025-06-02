@@ -1,0 +1,34 @@
+__import__:
+    - "experiments/defaults.yaml"
+    - "experiments/cee_us/settings/common/basic.yaml"
+    - "experiments/cee_us/settings/construction/zero_shot_generalization/common/basic_gnn_ensemble_zero_shot.yaml"    
+    - "experiments/cee_us/settings/construction/zero_shot_generalization/common/controller_stack.yaml"
+
+# GNNs work with more or less objects as seen during free play time! 
+env_params:
+  num_blocks: 2
+  fixed_goal: true
+
+# Make sure the settings for the model specified in 
+# "experiments/cee_us/settings/construction/zero_shot_generalization/common/basic_gnn_ensemble_zero_shot.yaml"
+# and the loaded model settings match! You can also overwrite the forward_model_params in this file!
+# forward_model_params:
+#    model_params: 
+#       ...
+
+forward_model_init: 
+    pretrainer: null
+    pickle_path: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225/forward_model"
+
+rollout_params:
+  task_horizon: 100
+
+# ~1/3 of freeplay rollouts
+number_of_rollouts: 4500
+
+# You can set the seed here in the following line!
+seed: 61745
+
+working_dir: "results/cee_us/zero_shot/2blocks/225iters/fixed_g/stack_4500/gnn_ensemble_icem"
+
+device: "cuda:0"

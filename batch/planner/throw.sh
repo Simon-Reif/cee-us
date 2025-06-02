@@ -2,7 +2,7 @@
 
 # Sample Slurm job script for Galvani 
 
-#SBATCH -J planner_data_collection               # Job name
+#SBATCH -J planner_throw_data_collection               # Job name
 #SBATCH --ntasks=1                 # Number of tasks
 #SBATCH --cpus-per-task=8          # Number of CPU cores per task
 #SBATCH --nodes=1                  # Ensure that all cores are on the same machine with nodes=1
@@ -31,6 +31,6 @@ PROJECT_PATH=$LUST_WORK/cee-us
 # - set environment variables
 # - determine commandline arguments for `srun` calls
 cd $PROJECT_PATH
-singularity exec --nv $SING_PATH python mbrl/main.py experiments/cee_us/settings/construction/zero_shot_generalization/new/throw.yaml
+singularity exec --nv $SING_PATH python mbrl/main.py experiments/cee_us/settings/construction/zero_shot_generalization/fixed_goal_positions/throw.yaml
 # Compute Phase
 #srun python3 runfile.py  # srun will automatically pickup the configuration defined via `#SBATCH` and `sbatch` command line arguments  
