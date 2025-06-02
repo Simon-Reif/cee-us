@@ -126,8 +126,6 @@ class FetchPickAndPlaceConstruction(
             requires_grad=False,
             device=torch_helpers.device,
         )
-        if "fixed_goal" in kwargs:
-            self.fixed_goal = self._sample_goal()
 
     def obs_preproc(self, obs):
         return self.observation_wo_goal(obs)

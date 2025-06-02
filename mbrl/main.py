@@ -50,6 +50,10 @@ def main(params):
     #
 
     env = env_from_string(params.env, **params.env_params)
+    if "fixed_goal" in params and params.fixed_goal:
+        fixed_goal = env._sample_goal()
+        env.set_fixed_goal(fixed_goal)
+        print(f"Setting fixed goal in {env.name} to {fixed_goal}")
 
     forward_model = (
         None
