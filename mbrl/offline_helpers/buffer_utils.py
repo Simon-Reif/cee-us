@@ -269,9 +269,12 @@ def alt_trunc(buffer_dir, min_successes=2, subdir_name=None, steps_after_succ=0)
 #       pp, stack specific cutoff conditions
 def process_planner_buffer(working_dir, buffer_dir, min_successes=2, subdir=None, steps_after_succ=0, max_length=99):
     stable_T = 5 # as in "calculate success rates"
-    if subdir is None:
-        new_buffers_dir = os.path.join(buffer_dir, f"extra{steps_after_succ}")
-    trunc_subdir = os.path.join(new_buffers_dir, 'truncated')   
+    # if subdir is None:
+    #      new_buffers_dir = os.path.join(buffer_dir, f"extra{steps_after_succ}")
+    # else
+    #     new_buffers_dir = 
+    new_buffers_dir = working_dir
+    trunc_subdir = os.path.join(new_buffers_dir, 'truncated')
     os.makedirs(trunc_subdir, exist_ok=True)
     filtered_subdir = os.path.join(new_buffers_dir, 'filtered')
     os.makedirs(filtered_subdir, exist_ok=True)
@@ -395,10 +398,18 @@ def update_yaml(path, update_dict):
     yaml_save(data_dict, path)
 
 
-# TODO: another version of truncated, filtered buffer:
-# record successful episodes, truncate episodes to point of succeess 
 
 if __name__== "__main__":
+    working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/fixed_g/flip_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/fixed_g/pp_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/fixed_g/stack_4500/gnn_ensemble_icem",
+                "results/cee_us/zero_shot/2blocks/225iters/fixed_g/throw_4500/gnn_ensemble_icem"]
+    buffer_dirs = [os.path.join(dir, "checkpoints_000") for dir in working_dirs]
+
+    for working_dir, buffer_dir in zip(working_dirs, buffer_dirs):
+        process_planner_buffer(working_dir, buffer_dir, min_successes=2, max_length=99)
+
+if False and __name__== "__main__":
     working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/flip_4500/gnn_ensemble_icem",
                 "results/cee_us/zero_shot/2blocks/225iters/pp_4500/gnn_ensemble_icem",
                 "results/cee_us/zero_shot/2blocks/225iters/stack_4500/gnn_ensemble_icem",
