@@ -6,7 +6,7 @@ work_dir_prefix: "results/cee_us/construction/2blocks"
 
 logging:
   set_dynamic_wandbname: true
-  wandb_name_prefix: "wd0.1"
+  wandb_name_prefix: "wd0.01"
   wandb_name_params: ["mr", "disc", "zdim", "tau"]
   data_tag_in_name: true
 
@@ -48,7 +48,7 @@ controller_params:
     q_loss_coef: 0
     fb_pessimism_penalty: 0.0
     fb_target_tau: 1.0e-3
-    weight_decay: 0.1
+    weight_decay: 0.01
 
 
 eval:
