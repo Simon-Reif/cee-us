@@ -1,0 +1,16 @@
+__import__:
+    - "experiments/cee_us/settings/common/fb/fg_filt/filt_common.yaml"
+
+#working_dir: "results/cee_us/construction/2blocks/fp_plus_flip/05_19/disc90_zdim100_qloss0.1"
+train_data_tag: "flip"
+
+training_data_names: [cee_us_freeplay, planner_flip_fg]
+training_data:
+  cee_us_freeplay:
+    dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
+    weight: 1.0
+    max_episodes: False
+  planner_flip_fg:
+    dir: "results/cee_us/zero_shot/2blocks/225iters/fixed_g/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered"
+    weight: 1.0
+    max_episodes: 1500
