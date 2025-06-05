@@ -11,6 +11,6 @@ training_data:
     weight: 1.0
     max_episodes: False
   planner_pp_fg:
-    dir: "results/cee_us/zero_shot/2blocks/225iters/fixed_g/pp_4500/gnn_ensemble_icem/filtered"
+    dir: "results/cee_us/zero_shot/2blocks/225iters/fixed_g/pp_4500/gnn_ensemble_icem/checkpoints_000/filtered"
     weight: 1.0
     max_episodes: 1500

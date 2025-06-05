@@ -273,7 +273,7 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, subdir=None
     #      new_buffers_dir = os.path.join(buffer_dir, f"extra{steps_after_succ}")
     # else
     #     new_buffers_dir = 
-    new_buffers_dir = working_dir
+    new_buffers_dir = buffer_dir
     trunc_subdir = os.path.join(new_buffers_dir, 'truncated')
     os.makedirs(trunc_subdir, exist_ok=True)
     filtered_subdir = os.path.join(new_buffers_dir, 'filtered')
