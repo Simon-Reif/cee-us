@@ -64,7 +64,7 @@ def maybe_set_start_states(buffer_manager, params, task):
         if params.debug:
             print("Using random start states")
         return None
-
+    
 def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, final=False, debug=False):
     eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
     """"
@@ -99,7 +99,11 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         rollout_man = RolloutManager(env, params.rollout_params)
         #TODO: set goals for obs from buffer
         #TODO: set just one goal, use that goal in the env
-        goal = env._sample_goal()
+        start_states = maybe_set_start_states(offline_data, params, task)
+        if params.eval.where_appl_start_states_expert or params.eval.start_states_from_train_data:
+            goal = env.goal_from_state(start_states[0])
+        else:
+            goal = env._sample_goal()
         env.set_fixed_goal(goal)
         #this only uses observations in calculating rewards since bs fixed between tasks
         z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
@@ -109,7 +113,6 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         ### Task Adaptation End
         rollout_buffer = RolloutBuffer()
         #TODO: set params.num_rollouts to eval.num_eval_episodes
-        start_states = maybe_set_start_states(offline_data, params, task)
 
         rollout_buffer = gen_rollouts(
             params,
