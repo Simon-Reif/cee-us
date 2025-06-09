@@ -58,6 +58,8 @@ class BufferManager:
     def get_mean_std(self, recalculate=True):
         if not recalculate and hasattr("mean"):
             return self.mean, self.std
+        if len(self.buffers) == 1:
+            return self.buffers[0].get_mean_std()
         buffer_obs = [buffer["next_observations"] for buffer in self.buffers]
         buffer_obs = np.array(buffer_obs, dtype=object)
         mean, std = mean_std_weighted_data(buffer_obs, self.probs)

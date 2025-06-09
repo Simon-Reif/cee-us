@@ -65,7 +65,11 @@ def eval_bc(controller, params, t, train_data:BufferManager=None):
 
         success_rates_eps_dict[task] = success_rates_eps
         success_rates_dict[task] = mean_success_rate
-    return success_rates_eps_dict, success_rates_dict
+    eval_return_dict = {
+        "success_rates_eps": success_rates_eps_dict,
+        "success_rates": success_rates_dict,
+    }
+    return eval_return_dict
 
     
 
@@ -141,15 +145,15 @@ def main(params):
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
             if params_copy.eval.start_states_from_train_data:
-                success_rates_eps, success_rates = eval_bc(bc_controller, params_copy, iteration, train_data=buffer_manager)
+                eval_return_dict = eval_bc(bc_controller, params_copy, iteration, train_data=buffer_manager)
             else:
-                success_rates_eps, success_rates = eval_bc(bc_controller, params_copy, iteration)
+                eval_return_dict = eval_bc(bc_controller, params_copy, iteration)
             # TODO: move this into eval
-            updated = update_best_success_by_task(best_success_by_task, success_rates, iteration, debug)
+            updated = update_best_success_by_task(best_success_by_task, eval_return_dict["success_rates"], iteration, debug)
             if updated:
                 print_best_success_by_task(best_success_by_task, to_yaml=True, working_dir=params.working_dir)
 
-            save_fb_checkpoint(params.working_dir, iteration, success_rates_dict=success_rates_eps, 
+            save_fb_checkpoint(params.working_dir, iteration, eval_return_dict=eval_return_dict,
                                controller=bc_controller, loud=2 if debug else 0)
             
         
