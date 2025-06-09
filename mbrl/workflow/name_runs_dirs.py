@@ -23,7 +23,7 @@ param_name_map = {
     "orth": ("controller_params.train.ortho_coef", lambda x: f"{x}"),
     "exp_weight": ("training_data.planner_flip.weight", lambda x: f"{x}"),
     "exp_eps": ("training_data.planner_flip.max_episodes", lambda x: f"{x}"),
-    "lr_actor": ("controller_params.train.actor_lr", lambda x: _only_exp(x)),
+    "lr_actor": ("controller_params.train.lr_actor", lambda x: _only_exp(x)),
 }
 
 def _name_substr(params, tag):
