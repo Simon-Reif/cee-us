@@ -3,8 +3,10 @@ __import__:
 
 # working_dir: "results/cee_us/construction/2blocks/bc/flip/filtered_1500/05_06/1e-4"
 # training_data_dir: "datasets/construction/planner/filtered/1500/flip"
-
 work_dir_prefix: "results/cee_us/construction/2blocks/bc"
+
+logging:
+  wandb_name_params: ["lr_actor"]
 
 controller_params:
   model:

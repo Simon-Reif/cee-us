@@ -2,8 +2,8 @@ __import__:
     - "experiments/defaults.yaml"
     - "experiments/cee_us/settings/common/basic.yaml"
 
-training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem/checkpoints_000"
-working_dir: "results/cee_us/construction/2blocks/bc/work_dir_not_set_correctly"
+#training_data_dir: "results/cee_us/zero_shot/2blocks/225iters/construction_flip/gnn_ensemble_icem/checkpoints_000"
+#working_dir: "results/cee_us/construction/2blocks/bc/work_dir_not_set_correctly"
 set_dynamic_work_dir: true
 # load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
 # continue_training: true
@@ -15,6 +15,9 @@ number_of_rollouts: 10
 debug: false
 logging:
   project: "cee-us"
+  set_dynamic_wandbname: true
+  wandb_name_prefix: "bc"
+  data_tag_in_name: true
 
 #base env, rollout_params; these settings aren't used
 env: "FetchPickAndPlaceConstruction"

@@ -2,7 +2,9 @@
 import logging
 import os
 import pickle
+import sys
 import numpy as np
+from smart_settings.param_classes import recursive_objectify
 import torch
 import wandb
 from tqdm import tqdm
@@ -16,13 +18,13 @@ from mbrl.environments import env_from_string
 from mbrl.helpers import gen_rollouts
 from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.offline_helpers.buffer_utils import load_buffer_wog
-from mbrl.params_utils import read_params_from_cmdline, save_settings_to_json
+from mbrl.params_utils import is_settings_file, read_params_from_cmdline, save_settings_to_json
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import calculate_success_rates, print_best_success_by_task, update_best_success_by_task
-from mbrl.workflow.name_runs_dirs import get_working_dir
+from mbrl.workflow.name_runs_dirs import get_wandb_name, get_working_dir
 
 
 def eval_bc(controller, params, t, train_data:BufferManager=None):
@@ -168,15 +170,23 @@ def main(params):
 
 
 if __name__ == "__main__":
-    params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
+    if len(sys.argv)>=2 and is_settings_file(sys.argv[1]):
+        params = read_params_from_cmdline(verbose=True, save_params=False, make_immutable=False)
+        wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
 
-    wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
-    run=wandb.init(project=params.logging.project, entity="srtea", group="bc", config=params, allow_val_change=True)
-
+        run = wandb.init(project=params.logging.project, entity="srtea", config=params, allow_val_change=True)
+    else:
+        run = wandb.init()
+        params = recursive_objectify(run.config.as_dict(), make_immutable=False)
+    
     if "set_dynamic_work_dir" in params and params.set_dynamic_work_dir:
         #TODO: also set working_dir in wandb config
         params.working_dir = get_working_dir(params, run)
         run.config.update({"working_dir": params.working_dir}, allow_val_change=True)
+
+    if "set_dynamic_wandbname" in params.logging and params.logging.set_dynamic_wandbname:
+        run.name = get_wandb_name(params, run)
+        run.save()
 
     os.makedirs(params.working_dir, exist_ok=True)
 

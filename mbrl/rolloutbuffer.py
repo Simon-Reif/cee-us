@@ -1,5 +1,6 @@
 from collections import abc
 from collections.abc import Iterable
+import copy
 
 import numpy as np
 import torch
@@ -191,6 +192,15 @@ class RolloutBuffer(abc.Sequence):
         for f in Rollout.allowed_fields:
             if sum([1 for fields in all_field_names if f not in fields]) == 0:
                 yield f
+    
+    def __add__(self, other):
+        if not isinstance(other, RolloutBuffer):
+            raise TypeError("Can only add another RolloutBuffer")
+        c1 = copy.deepcopy(self.rollouts)
+        c2 = copy.deepcopy(other.rollouts)
+        c1.extend(c2)
+        del c2
+        return RolloutBuffer(rollouts=c1)
 
     @property
     def flat(self):

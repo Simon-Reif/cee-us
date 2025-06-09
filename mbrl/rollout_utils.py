@@ -263,7 +263,7 @@ class RolloutManager:
         else:
             if start_state is not None:
                 env.set_GT_state(start_state)
-            ob = env.reset_with_mode(mode)
+            ob = env.get_current_obs()
 
         if hasattr(policy, 'has_state') and policy.has_state:
             policy.beginning_of_rollout(
