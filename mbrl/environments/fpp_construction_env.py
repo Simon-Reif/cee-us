@@ -195,6 +195,10 @@ class FetchPickAndPlaceConstruction(
         else:
             raise ("Obs_type not recognized")
         return self.flatten_observation(obs), reward, done, info
+    
+    def get_current_obs(self):
+        obs = self._get_obs()
+        return self.flatten_observation(obs)
 
     def set_fixed_goal(self, goal):
         self.fixed_goal = goal.copy()
