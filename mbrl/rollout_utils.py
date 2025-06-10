@@ -18,8 +18,9 @@ from mbrl.environments.abstract_environments import (
     RealRobotEnvInterface,
 )
 from mbrl.helpers import hook_executer, tqdm_context
+from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals
 from mbrl.parallel_utils import CloudPickleWrapper, clear_mpi_env_vars
-from mbrl.rolloutbuffer import Rollout
+from mbrl.rolloutbuffer import Rollout, RolloutBuffer
 from mbrl.seeding import Seeding
 
 # noinspection PyUnresolvedReferences
@@ -114,13 +115,18 @@ class RolloutManager:
         )
     
     def single_rollout(self, controller, start_state):
-        rollout = self.sample(
+        rollouts = self.sample(
                     controller,
                     render=False,
                     no_rollouts=1,
                     start_state=[start_state],
                     )
-        return rollout
+        return rollouts
+    
+    def single_rollout_wog(self, controller, start_state):
+        rollouts = self.single_rollout(controller, start_state)
+        rollouts_wog = get_buffer_wo_goals(RolloutBuffer(rollouts=rollouts), self.env)
+        return rollouts_wog[0]
 
     # "start_ob/state" are lists of length no_rollouts
     def sample(

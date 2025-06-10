@@ -10,6 +10,7 @@ from mbrl.environments import env_from_string
 from mbrl.environments.fpp_construction_env import FetchPickAndPlaceConstruction
 from mbrl.helpers import gen_rollouts
 from mbrl.offline_helpers.buffer_manager import BufferManager
+from mbrl.offline_helpers.util_funs import dynamic_time_warp
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
 
@@ -182,10 +183,95 @@ def _random_uniform_indices(length_arr, ratio):
     return np.random.choice(length_arr, num_indices, replace=False)
 
 
-#TODO: pretty ugly, maybe refactor
-def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
+#from cee-us freeplay
+default_env= {
+    "env": "FetchPickAndPlaceConstruction",
+    "env_params": {
+        "case": "Singletower",
+        "num_blocks": 2,
+        "shaped_reward": True,
+        "sparse": False,
+        "stack_only": True,
+        "visualize_mocap": False,
+        "visualize_target": False
+        }
+    }
 
-    #adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
+#if task doesn't play a role
+def get_default_env():
+    env_name = default_env["env"]
+    env_params = default_env["env_params"]
+    env = env_from_string(env_name, **env_params)
+    return env
+
+def goal_reaching_measure(episode, rollout):
+    diff = episode[-1]["next_observations"] - rollout[-1]["next_observations"]
+    return np.linalg.norm(diff, axis=-1)
+
+def imitation_measure(episode, rollout):
+    cost_fn = lambda x, y: np.linalg.norm(x - y, axis=-1)
+    dtw = dynamic_time_warp(episode["observations"], rollout["observations"], cost_fn)
+    return dtw
+
+def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
+    #adaptation_modalities: ["gr", "im10", "im50", "im"]
+
+    adapt_modalities = params.eval.s_eval.adaptation_modalities
+    #to set number_of_rollouts and rollout_params.task_horizon
+    eval_rollout_params = copy.deepcopy(params.rollout_params)
+    env = get_default_env()
+    rollout_man = RolloutManager(env, eval_rollout_params)
+
+    num_eval_traj = params.eval.s_eval.num_eval_trajectories # or change name
+    name_eps_tuples = buffer_manager.get_names_n_data(num_eval_traj)
+    
+    for name, episodes in name_eps_tuples:
+        scores = {adapt_mod: [] for adapt_mod in adapt_modalities}
+        for episode in episodes:
+            len_traj = len(episode["observations"])
+            rollout_man.task_horizon = len_traj
+            start_state = episode["env_states"][0]
+            next_obs_torch = torch_helpers.to_tensor(episode["next_observations"]).to(torch_helpers.device)
+
+            if "gr" in adapt_modalities:
+                #maybe dimensionality a problem-> test
+                z_r = controller.zr_from_obs(next_obs_torch[-1])
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout_wog(controller, start_state)
+                gr_score = goal_reaching_measure(episode, rollout)
+                scores["gr"].append(gr_score)
+            if "im10" in adapt_modalities:
+                idcs10 = _random_uniform_indices(len_traj, 0.1)
+                z_r = controller.zr_from_obs(next_obs_torch[idcs10])
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout_wog(controller, start_state)
+                im10_score = imitation_measure(episode, rollout)
+                scores["im10"].append(im10_score)
+            if "im50" in adapt_modalities:
+                idcs50 = _random_uniform_indices(len_traj, 0.5)
+                z_r = controller.zr_from_obs(next_obs_torch[idcs50])
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout_wog(controller, start_state)
+                im50_score = imitation_measure(episode, rollout)
+                scores["im50"].append(im50_score)
+            if "im" in adapt_modalities:
+                idcs = _random_uniform_indices(len_traj, 1.0)
+                z_r = controller.zr_from_obs(next_obs_torch[idcs])
+                controller.set_zr(z_r)
+                rollout = rollout_man.single_rollout_wog(controller, start_state)
+                im_score = imitation_measure(episode, rollout)
+                scores["im"].append(im_score)
+        for adapt_modality in adapt_modalities:
+            mean_dist = np.mean(scores[adapt_modality])
+            wandb.log({f"s_eval/{name}/{adapt_modality}/mean_dist": mean_dist}, step=t)
+            print(f"Mean score for {adapt_modality} in dataset {name} is {mean_dist}")
+
+
+
+#TODO: pretty ugly, maybe refactor
+def old_s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
+
+    #adaptation_modalities: ["gr", "im10", "im50", "im"]
     adapt_modalities = params.eval.s_eval.adaptation_modalities
 
     #to set number_of_rollouts and rollout_params.task_horizon

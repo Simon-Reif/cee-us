@@ -112,8 +112,11 @@ eval:
     # gr: last state
     # im: all states
     # im all states and their rewards
-    adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
+    #adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
+    adaptation_modalities: ["gr", "im10", "im50", "im"]
+
   start_states_from_train_data: true
+  where_appl_start_states_expert: true
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr
   num_inference_samples: 50_000

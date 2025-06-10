@@ -4,10 +4,17 @@ from mbrl.offline_helpers.buffer_utils import load_buffer_with_goals, load_buffe
 
 #dicts defining with datasets count as "expert" data for tasks
 dataset_to_task_map = {
+    "cee_us_freeplay": "Freeplay",
     "planner_flip": "Flip",
     "planner_throw": "Throw",
     "planner_pp": "PickAndPlace",
     "planner_stack": "Singletower",
+    "planner_flip_fg": "Flip",
+    "planner_throw_fg": "Throw",
+    "planner_pp_fg": "PickAndPlace",
+    "planner_stack_fg": "Singletower",
+    
+
 }
 
 # in future values may be lists
@@ -96,6 +103,13 @@ class BufferManager:
     def get_action_dim(self):
         return self.buffers[0][0]["actions"].shape[-1]
     
+    def get_names_n_data(self, num_samples):
+        return_tuples = []
+        for name, buffer in zip(self.names, self.buffers):
+            trajectories = buffer.random_n_rollouts(num_samples)
+            return_tuples.append((name, trajectories))
+        return return_tuples
+            
     # returns a list of tuples (task, trajectories)
     def get_tasks_and_traj_from_exp_data(self, num_samples):
         return_tuples = []
@@ -107,6 +121,7 @@ class BufferManager:
                 return_tuples.append((task, trajectories))
         return return_tuples
 
+    #TODO: maybe change to work with different buffers for each task
     def maybe_get_expert_buffer(self, task):
         if task in task_to_dataset_map:
             dataset = task_to_dataset_map[task]
