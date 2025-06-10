@@ -51,7 +51,7 @@ def calculate_success_rates(env: FetchPickAndPlaceConstruction, buffer: RolloutB
     return np.array(success_rate)
 
 def maybe_set_start_states(buffer_manager, params, task):
-    if "where_appl_start_states_expert" in params and params.eval.where_appl_start_states_expert:
+    if params.eval.where_appl_start_states_expert:
         exp_buffer = buffer_manager.maybe_get_expert_buffer(task)
         if exp_buffer:
             if params.debug:
@@ -101,7 +101,7 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         #TODO: set goals for obs from buffer
         #TODO: set just one goal, use that goal in the env
         start_states = maybe_set_start_states(offline_data, params, task)
-        if params.eval.where_appl_start_states_expert or params.eval.start_states_from_train_data:
+        if params.eval.fixed_goal and params.eval.where_appl_start_states_expert:
             goal = env.goal_from_state(start_states[0])
         else:
             goal = env._sample_goal()
@@ -213,7 +213,7 @@ def imitation_measure(episode, rollout):
     dtw = dynamic_time_warp(episode["observations"], rollout["observations"], cost_fn)
     return dtw
 
-def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, debug=False):
+def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, final=False, debug=False):
     #adaptation_modalities: ["gr", "im10", "im50", "im"]
 
     adapt_modalities = params.eval.s_eval.adaptation_modalities
@@ -222,7 +222,10 @@ def s_eval(controller: ForwardBackwardController, buffer_manager: BufferManager,
     env = get_default_env()
     rollout_man = RolloutManager(env, eval_rollout_params)
 
-    num_eval_traj = params.eval.s_eval.num_eval_trajectories # or change name
+    if final:
+        num_eval_traj = params.eval.s_eval.num_eval_trajectories_final
+    else:
+        num_eval_traj = params.eval.s_eval.num_eval_trajectories # or change name
     name_eps_tuples = buffer_manager.get_names_n_data(num_eval_traj)
     
     for name, episodes in name_eps_tuples:

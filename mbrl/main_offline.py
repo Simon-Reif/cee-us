@@ -96,10 +96,11 @@ def main(params):
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
             
-            s_eval(fb_controller, buffer_manager, params_copy, iteration, debug=debug)
 
             final = iteration == final_iter
-            eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration, final)
+            s_eval(fb_controller, buffer_manager, params_copy, iteration, final=final, debug=debug)
+            eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration, final, debug=debug)
+            
 
             # #TODO: update eval return dict with alternative evals (s_eval)
             # # TODO: move this into eval
