@@ -98,7 +98,7 @@ def main(params):
             
 
             final = iteration == final_iter
-            s_eval(fb_controller, buffer_manager, params_copy, iteration, final=final, debug=debug)
+            #s_eval(fb_controller, buffer_manager, params_copy, iteration, final=final, debug=debug)
             eval_return_dict = eval(fb_controller, buffer_manager, params_copy, iteration, final, debug=debug)
             
 

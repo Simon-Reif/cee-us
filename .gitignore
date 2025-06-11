@@ -133,3 +133,7 @@ _site/
 .sass-cache/
 .jekyll-cache/
 .jekyll-metadata
+mbrl/offline_helpers/eval_goal.py
+mbrl/controllers/fb_cpr.py
+mbrl/main_online.py
+mbrl/models/fb_cpr_model.py

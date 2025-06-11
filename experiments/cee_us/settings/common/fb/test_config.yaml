@@ -115,6 +115,7 @@ eval:
     #adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
     adaptation_modalities: ["gr", "im10", "im50", "im"]
 
+  goal_from_exp_data: true
   start_states_from_train_data: true
   where_appl_start_states_expert: true
   #num_eval_episodes: 10 #->number_of_rollouts
@@ -123,7 +124,7 @@ eval:
   #num_inference_goals: 500
   eval_every_steps: 100_000
   # "Throw" translates into "Slide" in env_params.case
-  eval_tasks: ["Reach", "PickAndPlace", "Singletower", "Throw", "Flip"]
+  eval_tasks: ["Flip", "Reach", "PickAndPlace", "Singletower", "Throw"]
   # eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]
 
 

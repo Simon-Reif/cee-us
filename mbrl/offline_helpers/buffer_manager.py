@@ -19,10 +19,10 @@ dataset_to_task_map = {
 
 # in future values may be lists
 task_to_dataset_map = {
-    "Flip": "planner_flip",
-    "Throw": "planner_throw",
-    "PickAndPlace": "planner_pp",
-    "Singletower": "planner_stack",
+    "Flip": ["planner_flip", "planner_flip_fg"],
+    "Throw": ["planner_throw", "planner_throw_fg"],
+    "PickAndPlace": ["planner_pp", "planner_pp_fg"],
+    "Singletower": ["planner_stack", "planner_stack_fg"],
 }
 
 # data: n_datasets x dataset length(heterogenous) x data dim
@@ -124,11 +124,24 @@ class BufferManager:
     #TODO: maybe change to work with different buffers for each task
     def maybe_get_expert_buffer(self, task):
         if task in task_to_dataset_map:
-            dataset = task_to_dataset_map[task]
-            if dataset in self.names:
-                idx = self.names.index(dataset)
-                return self.buffers[idx]
+            t_datasets = task_to_dataset_map[task]
+            for dataset in t_datasets:
+                if dataset in self.names:
+                    idx = self.names.index(dataset)
+                    return self.buffers[idx]
         return False
+    
+    def maybe_get_goal(self, task, env):
+        if task in task_to_dataset_map:
+            t_datasets = task_to_dataset_map[task]
+            for dataset in t_datasets:
+                if dataset in self.names:
+                    idx = self.names.index(dataset)
+                    buffer = self.buffers[idx]
+                    state = buffer["env_states"][0]
+                    goal = env.goal_from_state(state)
+                    return goal
+        return None
 
 
 if __name__ == "__main__":

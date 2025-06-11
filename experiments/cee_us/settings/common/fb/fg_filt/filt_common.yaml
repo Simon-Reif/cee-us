@@ -53,5 +53,6 @@ controller_params:
 
 eval:
   num_inference_samples: 50_000
+  goal_from_exp_data: true
   where_appl_start_states_expert: true
   start_states_from_train_data: true

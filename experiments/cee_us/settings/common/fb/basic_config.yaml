@@ -98,7 +98,7 @@ eval:
     adaptation_modalities: ["gr", "im10", "im50", "im"]
 
   number_of_rollouts_final: 100
-  fixed_goal: false
+  goal_from_exp_data: false
   where_appl_start_states_expert: false
   start_states_from_train_data: false
   #num_eval_episodes: 10 #->number_of_rollouts

@@ -54,17 +54,24 @@ def maybe_set_start_states(buffer_manager, params, task):
     if params.eval.where_appl_start_states_expert:
         exp_buffer = buffer_manager.maybe_get_expert_buffer(task)
         if exp_buffer:
-            if params.debug:
-                print(f"Using expert buffer {exp_buffer.name} from training data for start states")
+            print(f"Using expert buffer for start states")
             return exp_buffer.sample_start_states(params.number_of_rollouts)
     if params.eval.start_states_from_train_data:
-        if params.debug:
-            print("Using training data for start states")
+        print("Using training data for start states")
         return buffer_manager.sample_start_states(params.number_of_rollouts)
     else:
-        if params.debug:
-            print("Using random start states")
+        print("Using random start states")
         return None
+    
+def maybe_set_goal(buffer_manager, params, task, env):
+    if params.eval.goal_from_exp_data:
+        m_goal = buffer_manager.maybe_get_goal(task, env)
+        if m_goal is not None:
+            print("Set goal from expert data")
+            return m_goal
+    print("Set random goal")
+    return env._sample_goal()
+
     
 def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, final=False, debug=False):
     eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
@@ -101,10 +108,7 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         #TODO: set goals for obs from buffer
         #TODO: set just one goal, use that goal in the env
         start_states = maybe_set_start_states(offline_data, params, task)
-        if params.eval.fixed_goal and params.eval.where_appl_start_states_expert:
-            goal = env.goal_from_state(start_states[0])
-        else:
-            goal = env._sample_goal()
+        goal = maybe_set_goal(offline_data, params, task, env)
         env.set_fixed_goal(goal)
         #this only uses observations in calculating rewards since bs fixed between tasks
         z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
