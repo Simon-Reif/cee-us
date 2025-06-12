@@ -283,7 +283,7 @@ def process_planner_buffer(working_dir, buffer_dir, min_successes=2, subdir=None
     
     with open(os.path.join(buffer_dir, "rollouts"), 'rb') as f:
         buffer_with_goals = pickle.load(f)
-    #buffer_with_goals = repair_dtype_bug(buffer_with_goals)
+    buffer_with_goals = repair_dtype_bug(buffer_with_goals)
     buffer_wog = get_buffer_wo_goals(buffer_with_goals, env)
     with open(os.path.join(buffer_dir, "rollouts_wog"), "wb") as f:
                     pickle.dump(buffer_wog, f)
@@ -398,7 +398,7 @@ def update_yaml(path, update_dict):
     yaml_save(data_dict, path)
 
 
-if __name__ == "__main__":
+if False and __name__ == "__main__":
     #prefix = "/home/simonreif/galvani"
     paths = ["results/cee_us/zero_shot/2blocks/225iters/fixed_g/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog",
                 "results/cee_us/zero_shot/2blocks/225iters/fixed_g/pp_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog",
@@ -411,7 +411,7 @@ if __name__ == "__main__":
         buffer = repair_dtype_bug(buffer, save_path=path)
         print(f"dtype after {buffer[0].dtype}")
 
-if False and __name__== "__main__":
+if __name__ == "__main__":
     working_dirs = ["results/cee_us/zero_shot/2blocks/225iters/fixed_g/flip_4500/gnn_ensemble_icem",
                 "results/cee_us/zero_shot/2blocks/225iters/fixed_g/pp_4500/gnn_ensemble_icem",
                 "results/cee_us/zero_shot/2blocks/225iters/fixed_g/stack_4500/gnn_ensemble_icem",
