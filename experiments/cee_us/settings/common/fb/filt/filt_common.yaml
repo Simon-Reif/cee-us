@@ -6,7 +6,7 @@ work_dir_prefix: "results/cee_us/construction/2blocks"
 
 logging:
   set_dynamic_wandbname: true
-  wandb_name_prefix: "exp_start_states"
+  wandb_name_prefix: "base"
   wandb_name_params: ["mr", "disc", "zdim", "tau"]
   data_tag_in_name: true
 
@@ -37,7 +37,7 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 100
+      z_dim: 50
   train:
     discount: 0.95
     train_goal_ratio: 0.5
@@ -53,5 +53,5 @@ controller_params:
 
 eval:
   num_inference_samples: 50_000
-  where_appl_start_states_expert: true
-  start_states_from_train_data: true
+  where_appl_start_states_expert: false
+  start_states_from_train_data: false
