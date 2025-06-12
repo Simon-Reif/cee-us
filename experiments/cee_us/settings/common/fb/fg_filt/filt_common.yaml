@@ -10,7 +10,7 @@ logging:
   wandb_name_params: ["mr", "disc", "zdim", "tau"]
   data_tag_in_name: true
 
-training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
+training_data_names: [cee_us_freeplay, planner_flip_fg, planner_pp_fg, planner_stack_fg, planner_throw_fg]
 training_data:
   cee_us_freeplay:
     dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
