@@ -399,12 +399,12 @@ def update_yaml(path, update_dict):
 
 
 if __name__ == "__main__":
-    prefix = "/home/simonreif/galvani"
+    #prefix = "/home/simonreif/galvani"
     paths = ["results/cee_us/zero_shot/2blocks/225iters/fixed_g/flip_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog",
                 "results/cee_us/zero_shot/2blocks/225iters/fixed_g/pp_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog",
                 "results/cee_us/zero_shot/2blocks/225iters/fixed_g/stack_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog",
                 "results/cee_us/zero_shot/2blocks/225iters/fixed_g/throw_4500/gnn_ensemble_icem/checkpoints_000/filtered/rollouts_wog"]
-    paths = [os.path.join(prefix, path) for path in paths]
+    #paths = [os.path.join(prefix, path) for path in paths]
     for path in paths:
         buffer = load_buffer(path)
         print(f"dtype before {buffer[0].dtype}")
