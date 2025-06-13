@@ -85,6 +85,8 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
         print(f"Evaluation at iteration {t}")
     if final:
         params.number_of_rollouts = params.eval.number_of_rollouts_final
+    else:
+        params.number_of_rollouts = params.eval.number_of_rollouts
 
 
     inference_samples = offline_data.sample(params.eval.num_inference_samples)

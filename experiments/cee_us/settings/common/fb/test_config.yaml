@@ -4,6 +4,10 @@ __import__:
 
 #training_data_dir: "results/cee_us/construction/2blocks/gnn_ensemble_cee_us_freeplay/checkpoints_225"
 
+set_common_weights_max_eps: true
+common_exp_data_weight: 2.0
+common_exp_data_max_episodes: 1200
+
 train_data_tag: "test_data_tag"
 training_data_names: [cee_us_freeplay, planner_flip]
 training_data:
@@ -109,12 +113,15 @@ controller_params:
 eval:
   s_eval:
     num_eval_trajectories: 2
+    num_eval_trajectories_final: 100
     # gr: last state
     # im: all states
     # im all states and their rewards
     #adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
     adaptation_modalities: ["gr", "im10", "im50", "im"]
 
+  number_of_rollouts: 10
+  number_of_rollouts_final: 100
   goal_from_exp_data: true
   start_states_from_train_data: true
   where_appl_start_states_expert: true

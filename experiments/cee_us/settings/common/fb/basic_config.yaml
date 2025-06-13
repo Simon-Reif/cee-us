@@ -7,6 +7,7 @@ __import__:
 #working_dir: "results/cee_us/construction/2blocks/work_dir_not_set_correctly"
 
 set_dynamic_work_dir: true
+set_common_weights_max_eps: false
 # load_agent: "results/cee_us/construction/2blocks/cluster_test_main_offline/checkpoint_2900000"
 # continue_training: true
 num_train_steps: 3_000_000
@@ -97,6 +98,7 @@ eval:
     # im: uniformly sampled states
     adaptation_modalities: ["gr", "im10", "im50", "im"]
 
+  number_of_rollouts: 10
   number_of_rollouts_final: 100
   goal_from_exp_data: false
   where_appl_start_states_expert: false
