@@ -6,16 +6,16 @@ __import__:
 work_dir_prefix: "results/cee_us/construction/2blocks/bc"
 
 logging:
-  wandb_name_prefix: "bc norm_obs"
+  wandb_name_prefix: "bc"
   wandb_name_params: ["lr_actor"]
 
 controller_params:
   model:
     actor_std: 0.2
-    norm_obs: true
+    norm_obs: false
   train:
     loss_fun: "log_prob" # "log_prob" or "mse"
-    lr_actor: 1.0e-5
+    lr_actor: 1.0e-4
     weight_decay: 0.0
     clip_grad_norm: 0.0
     stddev_clip: 0.3
