@@ -6,6 +6,7 @@ __import__:
 work_dir_prefix: "results/cee_us/construction/2blocks/bc"
 
 logging:
+  wandb_name_prefix: "bc norm_obs"
   wandb_name_params: ["lr_actor"]
 
 controller_params:

@@ -27,7 +27,7 @@ from mbrl.offline_helpers.eval import calculate_success_rates, print_best_succes
 from mbrl.workflow.name_runs_dirs import get_wandb_name, get_working_dir
 
 
-def eval_bc(controller, params, t, train_data:BufferManager=None):
+def eval_bc(controller, params, t, train_data:BufferManager=None, final=False):
     if t is not None:
         print(f"Evaluation at iteration {t}")
     success_rates_eps_dict={}
@@ -37,6 +37,11 @@ def eval_bc(controller, params, t, train_data:BufferManager=None):
         env=task_params.env
         env_params=task_params.env_params
         env = env_from_string(env, **env_params)
+        if final:
+            params.number_of_rollouts = params.eval.number_of_rollouts_final
+        else:
+            params.number_of_rollouts = params.eval.number_of_rollouts
+        
         params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
         print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
         #params.rollout_params.obs_wo_goals = True
@@ -128,9 +133,10 @@ def main(params):
     # print("_______________Debugging_End_______________")
 
     best_success_by_task = defaultdict(dict)
+    final_iter = start_iter + params_copy.num_train_steps
     for iteration in tqdm(range(start_iter+1, start_iter+1+params.num_train_steps)):
     #for iteration in tqdm(range(10)):
-
+        final = iteration == final_iter
         metrics = bc_controller.update(buffer_manager, iteration)
 
         if debug or (iteration % params.log_every_updates == 0):
@@ -145,9 +151,9 @@ def main(params):
         ## Debug End
         if debug or (iteration % params.eval.eval_every_steps == 0 and iteration > 0) or iteration == start_iter+params.num_train_steps:
             if params_copy.eval.start_states_from_train_data:
-                eval_return_dict = eval_bc(bc_controller, params_copy, iteration, train_data=buffer_manager)
+                eval_return_dict = eval_bc(bc_controller, params_copy, iteration, train_data=buffer_manager, final=final)
             else:
-                eval_return_dict = eval_bc(bc_controller, params_copy, iteration)
+                eval_return_dict = eval_bc(bc_controller, params_copy, iteration, final=final)
             # TODO: move this into eval
             updated = update_best_success_by_task(best_success_by_task, eval_return_dict["success_rates"], iteration, debug)
             if updated:
