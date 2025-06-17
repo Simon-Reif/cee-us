@@ -21,9 +21,10 @@ param_name_map = {
     "mr": ("controller_params.train.train_goal_ratio", lambda x: f"{float(x):1.2}"),
     "tau": ("controller_params.train.fb_target_tau", lambda x:_only_exp(x)),
     "orth": ("controller_params.train.ortho_coef", lambda x: f"{x}"),
-    "exp_weight": ("training_data.planner_throw.weight", lambda x: f"{x}"),
-    "exp_eps": ("training_data.planner_throw.max_episodes", lambda x: f"{x}"),
+    "exp_weight": ("common_exp_data_weight", lambda x: f"{x}"),
+    "exp_eps": ("common_exp_data_max_episodes", lambda x: f"{x}"),
     "lr_actor": ("controller_params.train.lr_actor", lambda x: _only_exp(x)),
+    "lr": ("controller_params.train.lr_general", lambda x: _only_exp(x)),
 }
 
 def _name_substr(params, tag):
@@ -56,6 +57,30 @@ def get_working_dir(params, run):
     run_id = run.id
     working_dir = os.path.join(prefix, data_tag, run_id)
     return working_dir
+
+
+def set_common_weights_max_eps(params, run):
+    weight = params.common_exp_data_weight
+    max_episodes = params.common_exp_data_max_episodes
+    for name in params.training_data_names:
+        dataset = params.training_data[name]
+        if "weight" not in dataset:
+            dataset["weight"] = weight
+            run.config.update({f"training_data.{name}.weight": weight}, allow_val_change=True)
+        if "max_episodes" not in dataset:
+            dataset["max_episodes"] = max_episodes
+            run.config.update({f"training_data.{name}.max_episodes": max_episodes}, allow_val_change=True)
+    run.config.update({"training_data": params.training_data}, allow_val_change=True)
+    
+def set_all_lr(params, run):
+    lr = params.controller_params.train.lr_general
+    params.controller_params.train["lr_f"] = lr
+    run.config.update({"controller_params.train.lr_f": lr}, allow_val_change=True)
+    params.controller_params.train["lr_b"] = lr
+    run.config.update({"controller_params.train.lr_b": lr}, allow_val_change=True)
+    params.controller_params.train["lr_actor"] = lr
+    run.config.update({"controller_params.train.lr_actor": lr}, allow_val_change=True)
+    run.config.update({"controller_params": params.controller_params}, allow_val_change=True)
     
 
 if __name__ == "__main__":

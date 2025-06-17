@@ -45,6 +45,13 @@ class BufferManager:
         self.debug = params.debug
         self.buffers = []
         sum_weights = 0
+        #TODO: remove names if max_eps = 0
+        for name in self.names[:]:
+            max_eps = self.training_data[name]["max_episodes"]
+            if max_eps is not False and max_eps == 0:
+                print(f"Skipping dataset {name} with max_eps = 0")
+                self.names.remove(name)
+
         for name in self.names:
             dir = self.training_data[name]["dir"]
             if "with_goals" in self.training_data[name] and self.training_data[name]["with_goals"]:
@@ -53,7 +60,7 @@ class BufferManager:
             else:
                 buffer = load_buffer_wog(dir=dir)
             max_eps = self.training_data[name]["max_episodes"]
-            if max_eps and len(buffer) > max_eps:
+            if max_eps is not False and len(buffer) > max_eps:
                 buffer = buffer.random_n_rollouts(num_rollouts=max_eps)
                 if self.debug:
                     print(f"Shortened buffer {name} to {len(buffer)}")

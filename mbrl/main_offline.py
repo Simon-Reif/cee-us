@@ -20,7 +20,7 @@ from mbrl.params_utils import is_settings_file, read_params_from_cmdline, save_s
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import eval, print_best_success_by_task, s_eval, update_best_success_by_task
-from mbrl.workflow.name_runs_dirs import get_wandb_name, get_working_dir
+from mbrl.workflow.runtime_config_setting import get_wandb_name, get_working_dir, set_all_lr, set_common_weights_max_eps
 
 
 def main(params):
@@ -140,9 +140,16 @@ if __name__ == "__main__":
         params.working_dir = get_working_dir(params, run)
         run.config.update({"working_dir": params.working_dir}, allow_val_change=True)
 
+    if "lr_general" in params.controller_params.train and params.controller_params.train.lr_general is not None:
+        set_all_lr(params, run)
+
+    if "set_common_weights_max_eps" in params and params.set_common_weights_max_eps:
+        set_common_weights_max_eps(params, run)
+
     if "set_dynamic_wandbname" in params.logging and params.logging.set_dynamic_wandbname:
         run.name = get_wandb_name(params, run)
         run.save()
+
 
     os.makedirs(params.working_dir, exist_ok=True)
 
