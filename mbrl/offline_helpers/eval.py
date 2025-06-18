@@ -72,8 +72,52 @@ def maybe_set_goal(buffer_manager, params, task, env):
     print("Set random goal")
     return env._sample_goal()
 
+
+def next_obs_and_Bs_from_buffer(buffer, fb, num_inference_samples):
+    inference_samples = buffer.sample(num_inference_samples)
+    next_obs = torch_helpers.to_tensor(inference_samples["next_observations"]).to(torch_helpers.device)
+    bs=fb.calculate_Bs(next_obs)
+    return next_obs, bs
+
+def eval_task(task, controller: ForwardBackwardController, params, buffer_manager, next_obs=None, bs=None):
+    if next_obs is None or bs is None:
+        next_obs, bs = next_obs_and_Bs_from_buffer(buffer_manager, controller, params.eval.num_inference_samples)
+    task_params=params.eval_envs[task]
+    ### Task Adaptation
+    env_name=task_params.env
+    env_params=task_params.env_params
+    env = env_from_string(env_name, **env_params)
+    params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
+    print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
+    rollout_man = RolloutManager(env, params.rollout_params)
+    #TODO: set goals for obs from buffer
+    start_states = maybe_set_start_states(buffer_manager, params, task)
+    rollout_buffer = RolloutBuffer()
+    goals = []
+    z_rs = []
+    for i in range(params.number_of_rollouts):
+        goal = maybe_set_goal(buffer_manager, params, task, env)
+        env.set_fixed_goal(goal)
+        z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
+        controller.set_zr(z_r)
+        rollout = rollout_man.single_rollout(controller, start_states[i])
+        rollout_buffer.extend(rollout)
+        goals.append(goal)
+        z_rs.append(torch_helpers.to_numpy(z_r))
+    success_rates_eps = calculate_success_rates(env, rollout_buffer)
+    mean_success_rate = success_rates_eps.mean()
+
+    return_dict = {
+        "rollout_buffer": rollout_buffer,
+        "success_rates_eps": success_rates_eps,
+        "mean_success_rate": mean_success_rate,
+        "z_rs": z_rs,
+        "goals": goals,
+    }
+
+
     
-def eval(controller: ForwardBackwardController, offline_data: BufferManager, params, t=None, final=False, debug=False):
+def eval(controller: ForwardBackwardController, buffer_manager: BufferManager, params, t=None, final=False, debug=False):
     eval_logger = allogger.get_logger(scope="eval", default_outputs=["tensorboard"])
     """"
     num_eval_episodes: 10
@@ -88,60 +132,27 @@ def eval(controller: ForwardBackwardController, offline_data: BufferManager, par
     else:
         params.number_of_rollouts = params.eval.number_of_rollouts
 
-
-    inference_samples = offline_data.sample(params.eval.num_inference_samples)
-    next_obs = torch_helpers.to_tensor(inference_samples["next_observations"]).to(torch_helpers.device)
-    #obs, actions, next_obs = torch_helpers.to_tensor_device(*offline_data.get_random_transitions(params.eval.num_inference_samples))
-
-    bs=controller.calculate_Bs(next_obs)
+    next_obs, bs = next_obs_and_Bs_from_buffer(buffer_manager, controller, params.eval.num_inference_samples)
     success_rates_eps_dict={}
     success_rates_dict={}
     z_rs={}
     goals={}
     for task in params.eval.eval_tasks:
-        task_params=params.eval_envs[task]
-        ### Task Adaptation
-        env=task_params.env
-        env_params=task_params.env_params
-        env = env_from_string(env, **env_params)
-        params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
-        print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
-        rollout_man = RolloutManager(env, params.rollout_params)
-        #TODO: set goals for obs from buffer
-        #TODO: set just one goal, use that goal in the env
-        start_states = maybe_set_start_states(offline_data, params, task)
-        goal = maybe_set_goal(offline_data, params, task, env)
-        env.set_fixed_goal(goal)
-        #this only uses observations in calculating rewards since bs fixed between tasks
-        z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
-        controller.set_zr(z_r)
-        # if debug:
-        #     print(f"Calculated zr: {z_r}")
-        ### Task Adaptation End
-        rollout_buffer = RolloutBuffer()
-        #TODO: set params.num_rollouts to eval.num_eval_episodes
+        task_return_dict = eval_task(task, controller, params, buffer_manager, next_obs=next_obs, bs=bs)
+        mean_success_rate = task_return_dict["mean_success_rate"]
+        rollout_buffer = task_return_dict["rollout_buffer"]
+        success_rates_eps = task_return_dict["success_rates_eps"]
+        z_rs = task_return_dict["z_rs"]
+        goals = task_return_dict["goals"]
 
-        rollout_buffer = gen_rollouts(
-            params,
-            rollout_man,
-            controller,
-            None, #initial_controller
-            rollout_buffer,
-            None, #forward_model
-            t, #iteration
-            False, #do_initial_rollouts
-            start_states=start_states,
-        )
-        success_rates_eps = calculate_success_rates(env, rollout_buffer)
-        mean_success_rate = success_rates_eps.mean()
         eval_logger.log(mean_success_rate, key=f"{task}_success_rate")
         wandb.log({f"eval/{task}_success_rate": mean_success_rate}, step=t)
         print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
 
         success_rates_eps_dict[task] = success_rates_eps
         success_rates_dict[task] = mean_success_rate
-        z_rs[task] = torch_helpers.to_numpy(z_r)
-        goals[task] = goal
+        z_rs[task] = z_rs
+        goals[task] = goals
 
     eval_return_dict = {
         "success_rates_eps": success_rates_eps_dict,

@@ -17,8 +17,8 @@ training_data:
     max_episodes: False
   planner_flip:
     dir: "datasets/construction/bc/truncated/flip"
-    weight: 1.0
-    max_episodes: 1500
+    # weight: 1.0
+    # max_episodes: 0
 
 #working_dir: "results/cee_us/construction/2blocks/test_buffer_manager"
 set_dynamic_work_dir: True
@@ -35,8 +35,8 @@ debug: true
 logging:
   project: "test"
   set_dynamic_wandbname: true
-  wandb_name_params: ["disc", "zdim", "mr", "tau", "orth"]
-  wandb_name_prefix: "test_name_prefix"
+  wandb_name_params: ["lr", "disc", "zdim", "mr", "tau", "orth"]
+  wandb_name_prefix: "test_n_prefix"
   data_tag_in_name: true
 
 
@@ -92,9 +92,10 @@ controller_params:
 
   train:
     batch_size: 1024
-    lr_f: 0.0001
-    lr_actor: 0.0001
-    lr_b: 0.0001
+    lr_general: 1.0e-2
+    lr_f: 1.0e-4
+    lr_actor: 1.0e-4
+    lr_b: 1.0e-4
     ortho_coef: 1
     train_goal_ratio: 0.5
     actor_reg_coef: 0.01
@@ -118,7 +119,9 @@ eval:
     # im: all states
     # im all states and their rewards
     #adaptation_modalities: ["gr", "im10", "rew10", "rew50"]
-    adaptation_modalities: ["gr", "im10", "im50", "im"]
+    #adaptation_modalities: ["gr", "im10", "im50", "im"]
+    adaptation_modalities: ["gr", "im"]
+
 
   number_of_rollouts: 10
   number_of_rollouts_final: 100
@@ -131,7 +134,7 @@ eval:
   #num_inference_goals: 500
   eval_every_steps: 100_000
   # "Throw" translates into "Slide" in env_params.case
-  eval_tasks: ["Flip", "Reach", "PickAndPlace", "Singletower", "Throw"]
+  eval_tasks: ["PickAndPlace", "Flip", "Reach", "Singletower", "Throw"]
   # eval_tasks: ["PickAndPlace", "Singletower", "Throw", "Flip"]
 
 

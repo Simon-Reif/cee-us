@@ -308,10 +308,14 @@ class RolloutBuffer(abc.Sequence):
         std = np.std(obs, axis=0)
         return mean, std
     
+    def get_start_states(self):
+        start_states = [rollout["env_states"][0] for rollout in self.rollouts]
+        return np.array(start_states)
+    
     def sample_start_states(self, num_samples):
         indices = np.random.choice(len(self), num_samples, replace=False)
         start_states = [self[index]["env_states"][0] for index in indices]
-        return start_states
+        return np.array(start_states)
     
     def get_last_obs(self):
         last_obs = [rollout["next_observations"][-1] for rollout in self.rollouts]
