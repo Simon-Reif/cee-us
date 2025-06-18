@@ -123,7 +123,7 @@ eval:
     adaptation_modalities: ["gr", "im"]
 
 
-  number_of_rollouts: 10
+  number_of_rollouts: 2
   number_of_rollouts_final: 100
   goal_from_exp_data: true
   start_states_from_train_data: false

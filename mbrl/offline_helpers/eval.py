@@ -115,6 +115,7 @@ def eval_task(task, controller: ForwardBackwardController, params, buffer_manage
         "z_rs": z_rs,
         "goals": goals,
     }
+    return return_dict
 
 
     
@@ -143,8 +144,8 @@ def eval(controller: ForwardBackwardController, buffer_manager: BufferManager, p
         mean_success_rate = task_return_dict["mean_success_rate"]
         rollout_buffer = task_return_dict["rollout_buffer"]
         success_rates_eps = task_return_dict["success_rates_eps"]
-        z_rs = task_return_dict["z_rs"]
-        goals = task_return_dict["goals"]
+        t_z_rs = task_return_dict["z_rs"]
+        t_goals = task_return_dict["goals"]
 
         eval_logger.log(mean_success_rate, key=f"{task}_success_rate")
         wandb.log({f"eval/{task}_success_rate": mean_success_rate}, step=t)
@@ -152,8 +153,8 @@ def eval(controller: ForwardBackwardController, buffer_manager: BufferManager, p
 
         success_rates_eps_dict[task] = success_rates_eps
         success_rates_dict[task] = mean_success_rate
-        z_rs[task] = z_rs
-        goals[task] = goals
+        z_rs[task] = t_z_rs
+        goals[task] = t_goals
 
     eval_return_dict = {
         "success_rates_eps": success_rates_eps_dict,
