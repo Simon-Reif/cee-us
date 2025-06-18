@@ -126,7 +126,7 @@ eval:
   number_of_rollouts: 10
   number_of_rollouts_final: 100
   goal_from_exp_data: true
-  start_states_from_train_data: true
+  start_states_from_train_data: false
   where_appl_start_states_expert: true
   #num_eval_episodes: 10 #->number_of_rollouts
   # number of samples to estimate zr

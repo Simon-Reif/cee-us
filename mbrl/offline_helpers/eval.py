@@ -100,7 +100,8 @@ def eval_task(task, controller: ForwardBackwardController, params, buffer_manage
         env.set_fixed_goal(goal)
         z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
         controller.set_zr(z_r)
-        rollout = rollout_man.single_rollout(controller, start_states[i])
+        start_state = start_states[i] if start_states is not None else None
+        rollout = rollout_man.single_rollout(controller, start_state)
         rollout_buffer.extend(rollout)
         goals.append(goal)
         z_rs.append(torch_helpers.to_numpy(z_r))
