@@ -70,6 +70,8 @@ class Replay_Manager:
         )
         self.imit_cost_fun = lambda x, y: np.linalg.norm(x - y, axis=-1)  # default cost for imitation
 
+    def set_wandb_run(self, wandb_run):
+        self.wandb_run = wandb_run
     def load_training_data(self, params=None, reload=False):
         if self.buffer_manager is not None and not reload:
             return self.buffer_manager
@@ -199,7 +201,7 @@ class Replay_Manager:
         return rollouts_dict, results_dicts
     
     #TODO: add options to set task horizons, etc
-    def eval(self, tasks=None, num_rollouts=None, task_horizons=None):
+    def eval(self, tasks=None, num_rollouts=None, task_horizons=None, log_summary=False):
         """
         Evaluate the agent on the specified tasks.
         If tasks is None, use the tasks from the params.
@@ -235,6 +237,9 @@ class Replay_Manager:
             success_rates_eps = task_return_dict["success_rates_eps"]
             t_z_rs = task_return_dict["z_rs"]
             t_goals = task_return_dict["goals"]
+
+            if log_summary:
+                self.wandb_run.summary[f"success_rate/{task}"] = mean_success_rate
 
             print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
 
