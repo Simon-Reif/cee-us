@@ -2,10 +2,24 @@ import json
 import os
 import numpy as np
 import smart_settings
+import torch
 
+from mbrl import torch_helpers
 from mbrl.controllers.fb import ForwardBackwardController
 # from mbrl.controllers.fb_cpr import FBcprController
 
+def set_device(params):
+    if "device" in params:
+        if "cuda" in params.device:
+            if torch.cuda.is_available():
+                print(
+                    f"Using CUDA device {torch.cuda.current_device()} with compute capability {torch.cuda.get_device_capability(0)}"
+                )
+                torch_helpers.device = torch.device(params.device)
+            else:
+                print("CUDA is not available")
+    else:
+        torch_helpers.device = torch.device(params.device)
 
 def _get_cp_dir(working_dir, iter):
     return os.path.join(working_dir, f"checkpoint_{iter}")
@@ -66,6 +80,7 @@ def get_fb_controller(working_dir=None, iter=None, cp_dir=None, cpr=False):
         raise ValueError("Either cp_dir or working_dir and iter must be provided")
 
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
+    set_device(params)
     # if cpr:
         # return FBcprController.load(cp_dir, params.controller_params)
     # else:
@@ -75,6 +90,7 @@ def load_checkpoint(cp_dir=None, working_dir=None, iter=None):
     cp_dir = cp_dir if cp_dir is not None else _get_cp_dir(working_dir, iter)
     working_dir = os.path.dirname(cp_dir) if working_dir is None else working_dir
     params = smart_settings.load(os.path.join(working_dir, 'settings.json'), make_immutable=False)
+
     controller = get_fb_controller(cp_dir=cp_dir)
     return_dict = {"fb_controller": controller, "params": params}
     try:

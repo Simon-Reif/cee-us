@@ -51,18 +51,7 @@ def get_default_env():
 
 #maybe globally save location of training data
 
-def set_device(params):
-    if "device" in params:
-        if "cuda" in params.device:
-            if torch.cuda.is_available():
-                print(
-                    f"Using CUDA device {torch.cuda.current_device()} with compute capability {torch.cuda.get_device_capability(0)}"
-                )
-                torch_helpers.device = torch.device(params.device)
-            else:
-                print("CUDA is not available")
-    else:
-        torch_helpers.device = torch.device(params.device)
+
 
 #TODO: maybe rename
 class Replay_Manager:
@@ -71,7 +60,6 @@ class Replay_Manager:
         self.working_dir = working_dir if working_dir is not None else os.path.dirname(self.cp_dir)
         cp_dict = load_checkpoint(cp_dir=self.cp_dir)
         self.params = cp_dict["params"]
-        set_device(self.params)
         self.fb_controller = cp_dict["fb_controller"]
         self.zr_dict = cp_dict.get("zr_dict", None)
         self.goal_dict = cp_dict.get("goal_dict", None)
