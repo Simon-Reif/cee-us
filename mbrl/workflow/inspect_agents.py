@@ -51,14 +51,28 @@ def get_default_env():
 
 #maybe globally save location of training data
 
+def set_device(params):
+    if "device" in params:
+        if "cuda" in params.device:
+            if torch.cuda.is_available():
+                print(
+                    f"Using CUDA device {torch.cuda.current_device()} with compute capability {torch.cuda.get_device_capability(0)}"
+                )
+                torch_helpers.device = torch.device(params.device)
+            else:
+                print("CUDA is not available")
+    else:
+        torch_helpers.device = torch.device(params.device)
+
 #TODO: maybe rename
 class Replay_Manager:
     def __init__(self, working_dir=None, cp_dir=None, iter=None):
         self.cp_dir = cp_dir if cp_dir is not None else _get_cp_dir(working_dir, iter)
         self.working_dir = working_dir if working_dir is not None else os.path.dirname(self.cp_dir)
         cp_dict = load_checkpoint(cp_dir=self.cp_dir)
-        self.fb_controller = cp_dict["fb_controller"]
         self.params = cp_dict["params"]
+        set_device(self.params)
+        self.fb_controller = cp_dict["fb_controller"]
         self.zr_dict = cp_dict.get("zr_dict", None)
         self.goal_dict = cp_dict.get("goal_dict", None)
         self.buffer_manager = None  # will be set in load_training_data
@@ -69,17 +83,6 @@ class Replay_Manager:
             manual_flush=True,
             tensorboard_writer_params=dict(min_time_diff_btw_disc_writes=1),
         )
-        if "device" in self.params:
-            if "cuda" in self.params.device:
-                if torch.cuda.is_available():
-                    print(
-                        f"Using CUDA device {torch.cuda.current_device()} with compute capability {torch.cuda.get_device_capability(0)}"
-                    )
-                    torch_helpers.device = torch.device(self.params.device)
-                else:
-                    print("CUDA is not available")
-        else:
-            torch_helpers.device = torch.device(self.params.device)
         self.imit_cost_fun = lambda x, y: np.linalg.norm(x - y, axis=-1)  # default cost for imitation
 
     def set_wandb_run(self, wandb_run):
