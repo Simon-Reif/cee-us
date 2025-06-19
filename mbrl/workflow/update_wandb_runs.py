@@ -33,7 +33,7 @@ if __name__ == "__main__":
         # params = recursive_objectify(run.config, make_immutable=False)
         # working_dir = params.working_dir
 
-        rm = Replay_Manager(working_dir=run.config.working_dir, iter=LAST_ITER)
+        rm = Replay_Manager(working_dir=run.config["working_dir"], iter=LAST_ITER)
         eval_return_dict = rm.eval(num_rollouts=100)
         wandb_summary_success_rates(run, eval_return_dict)
 
