@@ -245,6 +245,7 @@ class Replay_Manager:
                 metric_name = f"success_rate/{task}"
                 print(f"Logging summary {metric_name} to run {self.wandb_run.id}")
                 self.wandb_run.summary[metric_name] = mean_success_rate
+                self.wandb_run.summary.update()
 
             print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
 
