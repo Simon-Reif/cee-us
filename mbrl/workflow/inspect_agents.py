@@ -14,7 +14,7 @@ from mbrl.environments import env_from_string
 from mbrl.offline_helpers.buffer_manager import BufferManager
 from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals
 from mbrl.offline_helpers.checkpoints import _get_cp_dir, load_checkpoint
-from mbrl.offline_helpers.eval import _random_uniform_indices, calculate_success_rates
+from mbrl.offline_helpers.eval import _random_uniform_indices, calculate_success_rates, eval_task, next_obs_and_Bs_from_buffer
 from mbrl.offline_helpers.util_funs import dynamic_time_warp
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
@@ -40,6 +40,7 @@ default_env= {
         }
     }
 
+#TODO: make all task env available globally
 #if task doesn't play a role
 def get_default_env():
     env_name = default_env["env"]
@@ -106,7 +107,7 @@ class Replay_Manager:
         info_dict = {"dtw_dists": dtw_dists, "z_r": z_r}
         return rollouts, info_dict
 
-
+    #deprecated, maybe rewrite
     #default to num_rollouts and task horizons in params
     def gen_rollouts_task(self, task, num_rollouts, task_horizon=None, use_saved_goal_zr=True, Bs=None, next_obs=None, eval=True):
         task_params=self.params.eval_envs[task]
@@ -147,7 +148,7 @@ class Replay_Manager:
         else:
             return rollouts, {}
         
-
+    #deprecated, maybe rewrite
     def generate_rollouts(
         self,
         tasks=None,
@@ -155,7 +156,7 @@ class Replay_Manager:
         task_horizon=None,  
         num_rollouts_list=None,  # alternative to num_rollouts, list of len(tasks)
         task_horizons=None,  # alternative to task_horizon, list of len(tasks)
-        use_saved_goals_zrs=True, 
+        use_saved_goals_zrs=False, 
     ):
         if use_saved_goals_zrs:
             if self.zr_dict is None or self.goal_dict is None:
@@ -165,9 +166,7 @@ class Replay_Manager:
         else:
             self.load_training_data()
             #same Bs for all tasks
-            samples = self.buffer_manager.sample(self.params.eval.num_inference_samples)
-            next_obs = torch_helpers.to_tensor(samples["next_observations"]).to(torch_helpers.device)
-            Bs = self.fb_controller.calculate_Bs(next_obs)
+            next_obs, Bs = next_obs_and_Bs_from_buffer(self.buffer_manager, self.fb_controller, self.params.eval.num_inference_samples)
 
 
         rollouts_dict = {}
@@ -186,7 +185,7 @@ class Replay_Manager:
         for i, task in enumerate(tasks):
             num_rollouts = num_rollouts_list[i]
             task_horizon = task_horizons[i]
-
+        
             rollout, results_dict = self.gen_rollouts_task(
                 task=task,
                 num_rollouts=num_rollouts,
@@ -198,6 +197,62 @@ class Replay_Manager:
             rollouts_dict[task] = rollout
             results_dicts[task] = results_dict
         return rollouts_dict, results_dicts
+    
+    #TODO: add options to set task horizons, etc
+    def eval(self, tasks=None, num_rollouts=None, task_horizons=None):
+        """
+        Evaluate the agent on the specified tasks.
+        If tasks is None, use the tasks from the params.
+        """
+        self.load_training_data()
+        if tasks is None:
+            tasks = self.params.eval.eval_tasks
+        if task_horizons is None:
+            task_horizons = [None] * len(tasks)
+        
+        params_flex = copy.deepcopy(self.params)
+
+        next_obs, bs = next_obs_and_Bs_from_buffer(self.buffer_manager, self.fb_controller, self.params.eval.num_inference_samples)
+
+        rollouts_dict = {}
+        success_rates_eps_dict={}
+        success_rates_dict={}
+        z_rs={}
+        goals={}
+        for i, task in enumerate(tasks):
+            task_return_dict = eval_task(
+                task=task,
+                controller=self.fb_controller,
+                params=params_flex,
+                buffer_manager=self.buffer_manager,
+                number_of_rollouts=num_rollouts,
+                next_obs=next_obs,
+                bs=bs,
+                task_horizon=task_horizons[i]
+                )
+            rollout_buffer = task_return_dict["rollout_buffer"]
+            mean_success_rate = task_return_dict["mean_success_rate"]
+            success_rates_eps = task_return_dict["success_rates_eps"]
+            t_z_rs = task_return_dict["z_rs"]
+            t_goals = task_return_dict["goals"]
+
+            print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
+
+            rollouts_dict[task] = rollout_buffer
+            success_rates_eps_dict[task] = success_rates_eps
+            success_rates_dict[task] = mean_success_rate
+            z_rs[task] = t_z_rs
+            goals[task] = t_goals
+
+        eval_return_dict = {
+            "rollouts_dict": rollouts_dict,
+            "success_rates_eps": success_rates_eps_dict,
+            "success_rates": success_rates_dict,
+            "z_rs": z_rs,
+            "goals": goals,
+            }
+        return eval_return_dict
+
     
     #other possible functionalities:
     # - generate a bunch of goals, corresponding zrs, linear regression good?
@@ -252,12 +307,13 @@ class VideoRecorder(object):
                 del self.env.viewer._markers[:]
         video.close()
 
-def record_imitation(rollout_base, rollouts_fb, output_path, name_suffix=""):
+def old_record_imitation(rollout_base, rollouts_fb, output_path, name_suffix=""):
     combined_rollouts = rollout_base + rollouts_fb 
     recorder = VideoRecorder(combined_rollouts, output_path, env=get_default_env(), name_suffix=name_suffix, name_infix="Imit")
     recorder.record(np.arange(len(combined_rollouts)))
 
-
+def record_imitation(rollout_base, rollouts_fb, output_path):
+    pass
 
 if __name__ == "__main__":
     pass

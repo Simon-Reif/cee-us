@@ -79,23 +79,33 @@ def next_obs_and_Bs_from_buffer(buffer, fb, num_inference_samples):
     bs=fb.calculate_Bs(next_obs)
     return next_obs, bs
 
-def eval_task(task, controller: ForwardBackwardController, params, buffer_manager, next_obs=None, bs=None):
+def eval_task(task, 
+              controller: ForwardBackwardController, 
+              params, 
+              buffer_manager, 
+              number_of_rollouts, 
+              next_obs=None, 
+              bs=None,
+              task_horizon=None):
     if next_obs is None or bs is None:
         next_obs, bs = next_obs_and_Bs_from_buffer(buffer_manager, controller, params.eval.num_inference_samples)
-    task_params=params.eval_envs[task]
+    task_params = params.eval_envs[task]
     ### Task Adaptation
-    env_name=task_params.env
-    env_params=task_params.env_params
+    env_name = task_params.env
+    env_params = task_params.env_params
     env = env_from_string(env_name, **env_params)
-    params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
+    if task_horizon is not None:
+        params.rollout_params.task_horizon = task_horizon
+    else:   
+        params.rollout_params.task_horizon = task_params.rollout_params.task_horizon
     print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
     rollout_man = RolloutManager(env, params.rollout_params)
-    #TODO: set goals for obs from buffer
+    # TODO: set goals for obs from buffer
     start_states = maybe_set_start_states(buffer_manager, params, task)
     rollout_buffer = RolloutBuffer()
     goals = []
     z_rs = []
-    for i in range(params.number_of_rollouts):
+    for i in range(number_of_rollouts):
         goal = maybe_set_goal(buffer_manager, params, task, env)
         env.set_fixed_goal(goal)
         z_r = controller.estimate_z_r(next_obs, goal, env, bs=bs)
@@ -107,7 +117,6 @@ def eval_task(task, controller: ForwardBackwardController, params, buffer_manage
         z_rs.append(torch_helpers.to_numpy(z_r))
     success_rates_eps = calculate_success_rates(env, rollout_buffer)
     mean_success_rate = success_rates_eps.mean()
-
     return_dict = {
         "rollout_buffer": rollout_buffer,
         "success_rates_eps": success_rates_eps,
@@ -130,9 +139,9 @@ def eval(controller: ForwardBackwardController, buffer_manager: BufferManager, p
     if t is not None:
         print(f"Evaluation at iteration {t}")
     if final:
-        params.number_of_rollouts = params.eval.number_of_rollouts_final
+        number_of_rollouts = params.eval.number_of_rollouts_final
     else:
-        params.number_of_rollouts = params.eval.number_of_rollouts
+        number_of_rollouts = params.eval.number_of_rollouts
 
     next_obs, bs = next_obs_and_Bs_from_buffer(buffer_manager, controller, params.eval.num_inference_samples)
     success_rates_eps_dict={}
@@ -140,7 +149,15 @@ def eval(controller: ForwardBackwardController, buffer_manager: BufferManager, p
     z_rs={}
     goals={}
     for task in params.eval.eval_tasks:
-        task_return_dict = eval_task(task, controller, params, buffer_manager, next_obs=next_obs, bs=bs)
+        task_return_dict = eval_task(
+            task=task,
+            controller=controller,
+            params=params,
+            buffer_manager=buffer_manager,
+            number_of_rollouts=number_of_rollouts,
+            next_obs=next_obs,
+            bs=bs,
+        )
         mean_success_rate = task_return_dict["mean_success_rate"]
         rollout_buffer = task_return_dict["rollout_buffer"]
         success_rates_eps = task_return_dict["success_rates_eps"]
