@@ -20,10 +20,12 @@ if __name__ == "__main__":
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
     api = wandb.Api()
     sweep_all = api.sweep("srtea/cee-us/i9rlw389")
+    run_list = sweep_all.runs
+
     #sweep_fp = api.sweep("srtea/cee-us/7dp4cmu2")
+    run_list
     # run_list = list(sweep_all.runs) + list(sweep_fp.runs)
 
-    run_list = sweep_all.runs
     for run in run_list:
         #params = recursive_objectify(run.config.as_dict(), make_immutable=False)
         # params = recursive_objectify(run.config, make_immutable=False)

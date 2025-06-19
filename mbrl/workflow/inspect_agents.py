@@ -9,6 +9,7 @@ import os
 
 import imageio
 import numpy as np
+import torch
 from mbrl import allogger, torch_helpers
 from mbrl.environments import env_from_string
 from mbrl.offline_helpers.buffer_manager import BufferManager
@@ -68,6 +69,17 @@ class Replay_Manager:
             manual_flush=True,
             tensorboard_writer_params=dict(min_time_diff_btw_disc_writes=1),
         )
+        if "device" in self.params:
+            if "cuda" in self.params.device:
+                if torch.cuda.is_available():
+                    print(
+                        f"Using CUDA device {torch.cuda.current_device()} with compute capability {torch.cuda.get_device_capability(0)}"
+                    )
+                    torch_helpers.device = torch.device(self.params.device)
+                else:
+                    print("CUDA is not available")
+        else:
+            torch_helpers.device = torch.device(self.params.device)
         self.imit_cost_fun = lambda x, y: np.linalg.norm(x - y, axis=-1)  # default cost for imitation
 
     def set_wandb_run(self, wandb_run):
@@ -239,7 +251,9 @@ class Replay_Manager:
             t_goals = task_return_dict["goals"]
 
             if log_summary:
-                self.wandb_run.summary[f"success_rate/{task}"] = mean_success_rate
+                metric_name = f"success_rate/{task}"
+                print(f"Logging summary {metric_name} to run {self.wandb_run.id}")
+                self.wandb_run.summary[metric_name] = mean_success_rate
 
             print("Success rate over {} rollouts in task {}, is {}".format(len(rollout_buffer), task, mean_success_rate))#
 
