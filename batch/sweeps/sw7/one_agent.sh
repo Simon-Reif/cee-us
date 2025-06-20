@@ -31,7 +31,7 @@ PROJECT_PATH=$LUST_WORK/cee-us
 # - set environment variables
 # - determine commandline arguments for `srun` calls
 cd $PROJECT_PATH
-singularity exec --nv $SING_PATH python batch/sweeps/start_agent.py
+singularity exec --nv $SING_PATH python batch/sweeps/sw7/start_agent.py
 # Compute Phase 
 
 #srun python3 runfile.py  # srun will automatically pickup the configuration defined via `#SBATCH` and `sbatch` command line arguments  
