@@ -20,9 +20,10 @@ param_name_map = {
     # mr for mixing ratio
     "mr": ("controller_params.train.train_goal_ratio", lambda x: f"{float(x):1.2}"),
     "tau": ("controller_params.train.fb_target_tau", lambda x:_only_exp(x)),
-    "orth": ("controller_params.train.ortho_coef", lambda x: f"{x}"),
+    "orth": ("controller_params.train.ortho_coef", lambda x: f"{x}"),   
     "exp_weight": ("common_exp_data_weight", lambda x: f"{x}"),
     "exp_eps": ("common_exp_data_max_episodes", lambda x: f"{x}"),
+    "fp_eps": ("training_data.cee_us_freeplay.max_episodes", lambda x: f"{x}"),
     "lr_actor": ("controller_params.train.lr_actor", lambda x: _only_exp(x)),
     "lr": ("controller_params.train.lr_general", lambda x: _only_exp(x)),
 }
