@@ -6,8 +6,8 @@ work_dir_prefix: "results/cee_us/construction/2blocks"
 
 logging:
   set_dynamic_wandbname: true
-  wandb_name_prefix: "new_eval"
-  wandb_name_params: ["lr", "disc", "zdim"]
+  wandb_name_prefix: "t3"
+  wandb_name_params: ["lr", "disc", "zdim", "orth"]
   data_tag_in_name: true
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
@@ -37,11 +37,11 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 50
+      z_dim: 150
   train:
     discount: 0.95
     train_goal_ratio: 0.5
-    ortho_coef: 1.0
+    ortho_coef: 10.0
     lr_general: 1.0e-4
     # lr_f: 1.0e-5
     # lr_actor: 1.0e-5
