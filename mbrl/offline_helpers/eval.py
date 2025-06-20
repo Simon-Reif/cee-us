@@ -50,15 +50,15 @@ def calculate_success_rates(env: FetchPickAndPlaceConstruction, buffer: RolloutB
     #print("Success rate over {} rollouts in task {}, is {}".format(len(buffer), env.case, np.asarray(success_rate).mean()))#
     return np.array(success_rate)
 
-def maybe_set_start_states(buffer_manager, params, task):
+def maybe_set_start_states(buffer_manager, params, task, number_of_rollouts):
     if params.eval.where_appl_start_states_expert:
         exp_buffer = buffer_manager.maybe_get_expert_buffer(task)
         if exp_buffer:
             print(f"Using expert buffer for start states")
-            return exp_buffer.sample_start_states(params.number_of_rollouts)
+            return exp_buffer.sample_start_states(number_of_rollouts)
     if params.eval.start_states_from_train_data:
         print("Using training data for start states")
-        return buffer_manager.sample_start_states(params.number_of_rollouts)
+        return buffer_manager.sample_start_states(number_of_rollouts)
     else:
         print("Using random start states")
         return None
@@ -101,7 +101,7 @@ def eval_task(task,
     print(f"Evaluating on task {task} with horizon {params.rollout_params.task_horizon}")
     rollout_man = RolloutManager(env, params.rollout_params)
     # TODO: set goals for obs from buffer
-    start_states = maybe_set_start_states(buffer_manager, params, task)
+    start_states = maybe_set_start_states(buffer_manager, params, task, number_of_rollouts)
     rollout_buffer = RolloutBuffer()
     goals = []
     z_rs = []
