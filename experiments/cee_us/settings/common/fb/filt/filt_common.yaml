@@ -6,7 +6,7 @@ work_dir_prefix: "results/cee_us/construction/2blocks"
 
 logging:
   set_dynamic_wandbname: true
-  wandb_name_prefix: 
+  wandb_name_prefix: ""
   wandb_name_params: ["lr", "disc", "zdim", "orth"]
   data_tag_in_name: true
 
