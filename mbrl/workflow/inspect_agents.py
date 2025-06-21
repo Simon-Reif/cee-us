@@ -7,18 +7,20 @@
 import copy
 import os
 
-import imageio
 import numpy as np
+from smart_settings.param_classes import recursive_objectify
 import torch
+import imageio
 from mbrl import allogger, torch_helpers
 from mbrl.environments import env_from_string
 from mbrl.offline_helpers.buffer_manager import BufferManager
-from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals
+from mbrl.offline_helpers.buffer_utils import get_buffer_wo_goals, yaml_load
 from mbrl.offline_helpers.checkpoints import _get_cp_dir, load_checkpoint
 from mbrl.offline_helpers.eval import _random_uniform_indices, calculate_success_rates, eval_task, next_obs_and_Bs_from_buffer
 from mbrl.offline_helpers.util_funs import dynamic_time_warp
 from mbrl.rollout_utils import RolloutManager
 from mbrl.rolloutbuffer import RolloutBuffer
+
 
 
 def set_rollout_params(params, num_rollouts, task_horizon):
@@ -51,12 +53,22 @@ def get_default_env():
 
 #maybe globally save location of training data
 
+def get_env(task):
+    env_dict = yaml_load("mbrl/workflow/envs.yaml")
+    env_dict=recursive_objectify(env_dict, make_immutable=False)
+    task_params=env_dict.eval_envs[task]
+    env_name=task_params.env
+    env_params=task_params.env_params
+    env = env_from_string(env_name, **env_params)
+    return env
+
+
 
 
 #TODO: maybe rename
 class Replay_Manager:
-    def __init__(self, working_dir=None, cp_dir=None, iter=None):
-        self.cp_dir = cp_dir if cp_dir is not None else _get_cp_dir(working_dir, iter)
+    def __init__(self, working_dir=None, cp_dir=None, cp_num=None):
+        self.cp_dir = cp_dir if cp_dir is not None else _get_cp_dir(working_dir, cp_num)
         self.working_dir = working_dir if working_dir is not None else os.path.dirname(self.cp_dir)
         cp_dict = load_checkpoint(cp_dir=self.cp_dir)
         self.params = cp_dict["params"]
@@ -69,7 +81,7 @@ class Replay_Manager:
             logdir=os.path.join(self.working_dir, "replay_man_logs"),
             default_outputs=["tensorboard"],
             manual_flush=True,
-            tensorboard_writer_params=dict(min_time_diff_btw_disc_writes=1),
+            #tensorboard_wrcp_num_params=dict(min_time_diff_btw_disc_writes=1),
         )
         self.imit_cost_fun = lambda x, y: np.linalg.norm(x - y, axis=-1)  # default cost for imitation
 
@@ -84,9 +96,9 @@ class Replay_Manager:
     
     def get_env(self, task):
         task_params=self.params.eval.eval_envs[task]
-        env=task_params.env
+        env_name=task_params.env
         env_params=task_params.env_params
-        env = env_from_string(env, **env_params)
+        env = env_from_string(env_name, **env_params)
         return env
 
     #TODO: select traj, record traj and imitation/goal reaching
@@ -280,10 +292,12 @@ def setup_video(output_path, name_suffix, name_prefix, fps, name_infix=""):
         i += 1
         file_path = os.path.join(output_path, f"{name_prefix}{name_infix}{name_suffix}_{i}.mp4")
     print("Record video in {}".format(file_path))
+    print(type(imageio))
     return (
         imageio.get_writer(file_path, fps=fps, codec="h264", quality=10, pixelformat="yuv420p"), #yuv420p, yuvj422p
         file_path,
     )
+
 
 path_prefix="video"
 class VideoRecorder(object):
@@ -318,6 +332,8 @@ class VideoRecorder(object):
                 del self.env.viewer._markers[:]
         video.close()
 
+
+
 def old_record_imitation(rollout_base, rollouts_fb, output_path, name_suffix=""):
     combined_rollouts = rollout_base + rollouts_fb 
     recorder = VideoRecorder(combined_rollouts, output_path, env=get_default_env(), name_suffix=name_suffix, name_infix="Imit")
@@ -326,5 +342,11 @@ def old_record_imitation(rollout_base, rollouts_fb, output_path, name_suffix="")
 def record_imitation(rollout_base, rollouts_fb, output_path):
     pass
 
+def dump(obj):
+  for attr in dir(obj):
+    print("obj.%s = %r" % (attr, getattr(obj, attr)))
+    
 if __name__ == "__main__":
+    #setup_video("videos", "test", "test_prefix", 30)
+    #dump(imageio)
     pass

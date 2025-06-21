@@ -1,0 +1,63 @@
+eval_tasks: [ "Flip", "Throw", "PickAndPlace", "Singletower", "Reach"]
+eval_envs:
+  Reach:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: false
+      case: "Reach"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 100
+  PickAndPlace:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: false
+      case: "PickAndPlace"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 400
+  Singletower:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: False
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: true
+      case: "Singletower"
+      visualize_target: true
+      visualize_mocap: false
+
+    rollout_params:
+      task_horizon: 600
+  # "Slide" stands for "Throw"
+  Throw:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: false
+      shaped_reward: false
+      num_blocks: 2
+      stack_only: true
+      case: "Slide"
+      visualize_target: true
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 200
+  Flip:
+    env: "FetchPickAndPlaceConstruction"
+    env_params:
+      sparse: true
+      shaped_reward: true
+      num_blocks: 2
+      stack_only: false
+      case: "Flip" 
+      visualize_mocap: false
+    rollout_params:
+      task_horizon: 500
