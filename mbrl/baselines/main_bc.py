@@ -24,7 +24,7 @@ from mbrl.rolloutbuffer import RolloutBuffer
 from mbrl.seeding import Seeding
 from mbrl.offline_helpers.checkpoints import get_latest_checkpoint, save_fb_checkpoint, save_meta
 from mbrl.offline_helpers.eval import calculate_success_rates, print_best_success_by_task, update_best_success_by_task
-from mbrl.workflow.name_runs_dirs import get_wandb_name, get_working_dir
+from mbrl.workflow.runtime_config_setting import get_wandb_name, get_working_dir
 
 
 def eval_bc(controller, params, t, train_data:BufferManager=None, final=False):
