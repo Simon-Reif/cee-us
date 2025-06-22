@@ -37,7 +37,7 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 50
+      z_dim: 100
   train:
     discount: 0.95
     train_goal_ratio: 0.5
