@@ -37,12 +37,12 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 100
+      z_dim: 50
   train:
     discount: 0.90
     train_goal_ratio: 0.5
     ortho_coef: 1.0
-    lr_general: 1.0e-5
+    lr_general: 1.0e-4
     # lr_f: 1.0e-4
     # lr_actor: 1.0e-4
     # lr_b: 1.0e-4
