@@ -26,6 +26,7 @@ param_name_map = {
     "fp_eps": ("training_data.cee_us_freeplay.max_episodes", lambda x: f"{x}"),
     "lr_actor": ("controller_params.train.lr_actor", lambda x: _only_exp(x)),
     "lr": ("controller_params.train.lr_general", lambda x: _only_exp(x)),
+    "q_loss": ("controller_params.train.q_loss_coef", lambda x: f"{x}"),
 }
 
 def _name_substr(params, tag):
