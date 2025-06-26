@@ -3,7 +3,9 @@ import wandb
 if __name__ == "__main__":
     wandb.login(key="25ee8d2e5fab3f028de5253bacadfe1ae8bfb760")
 
-    wandb.agent(sweep_id="srtea/cee-us/mbklkkie", count=1) # sweep9: mr and q_loss
+    wandb.agent(sweep_id="srtea/cee-us/s9n1zquv", count=1) # sweep10: exp data ablation zdim50
+
+    #wandb.agent(sweep_id="srtea/cee-us/mbklkkie", count=1) # sweep9: mr and q_loss
 
     #wandb.agent(sweep_id="srtea/cee-us/4f4l2blu", count=1) # sweep8: exp data amount vs weight
     #wandb.agent(sweep_id="srtea/cee-us/d6z8bjvr", count=1) # sweep6: exp data ablation 1
