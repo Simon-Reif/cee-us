@@ -7,7 +7,7 @@ work_dir_prefix: "results/cee_us/construction/2blocks"
 logging:
   set_dynamic_wandbname: true
   wandb_name_prefix: ""
-  wandb_name_params: ["lr", "disc", "zdim", "orth"]
+  wandb_name_params: ["pesspen","lr", "disc", "zdim", "orth"]
   data_tag_in_name: true
 
 training_data_names: [cee_us_freeplay, planner_flip, planner_pp, planner_stack, planner_throw]
@@ -37,12 +37,13 @@ controller_params:
   model:
     norm_obs: false
     archi:
-      z_dim: 100
+      z_dim: 50
   train:
-    discount: 0.95
+    actor_pessimism_penalty: 0.01
+    discount: 0.90
     train_goal_ratio: 0.5
     ortho_coef: 1.0
-    lr_general: 1.0e-5
+    lr_general: 1.0e-4
     # lr_f: 1.0e-5
     # lr_actor: 1.0e-5
     # lr_b: 1.0e-5
