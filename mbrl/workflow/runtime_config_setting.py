@@ -28,6 +28,7 @@ param_name_map = {
     "lr": ("controller_params.train.lr_general", lambda x: _only_exp(x)),
     "q_loss": ("controller_params.train.q_loss_coef", lambda x: f"{x}"),
     "pesspen": ("controller_params.train.actor_pessimism_penalty", lambda x: f"{x}"),
+    "norm_obs": ("controller_params.model.norm_obs", lambda x: f"{x}"),
 }
 
 def _name_substr(params, tag):
